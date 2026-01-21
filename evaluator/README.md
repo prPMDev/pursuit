@@ -53,10 +53,29 @@
 - Official page: https://claude.com/chrome
 - **Requires:** Paid Claude subscription (Pro or Team)
 
-**Setup:**
-1. Follow instructions in [`linkedin-evaluator-prompt.md`](linkedin-evaluator-prompt.md)
-2. Customize the "Your Background" section with your real details
-3. Save as `/linkedin-evaluator` shortcut in Claude in Chrome
+**Create Shortcut (One-Time Setup) - Two Methods:**
+
+**Method 1: Via Settings (Recommended)**
+1. Install the extension from Chrome Web Store
+2. Open the extension (click the Claude icon in your Chrome toolbar)
+3. Log in with your Claude account
+4. Click the **three dots** (menu) at the top of the extension
+5. Go to **Settings**
+6. Click **Shortcuts**
+7. Open [`linkedin-evaluator-prompt.md`](linkedin-evaluator-prompt.md)
+8. **Customize** the "Your Background" section with your real details
+9. Copy the entire customized prompt (from "WORKFLOW PROMPT STARTS HERE" section)
+10. Paste into the Shortcuts page
+11. Name it: `linkedin-evaluator`
+12. Save
+
+**Method 2: From Chat**
+1. Open [`linkedin-evaluator-prompt.md`](linkedin-evaluator-prompt.md) and customize your background
+2. Copy the entire customized prompt
+3. In Claude in Chrome, paste and send it
+4. **Hover over the prompt you just sent**
+5. Click the **save icon** that appears
+6. Name it: `linkedin-evaluator`
 
 **Use:**
 1. Navigate to LinkedIn post with job opportunity
@@ -74,10 +93,13 @@
 4. Follow up with the job description you want to evaluate
 5. Review the analysis and decide
 
-**Option 2: Claude in Chrome**
-1. Save [`prompt.md`](prompt.md) as `/job-evaluator` shortcut
-2. Trigger it when you have JD text
-3. Instant fit analysis
+**Option 2: Claude in Chrome (for repeat use)**
+
+Create `/job-evaluator` shortcut using either method:
+- **Method 1:** Three dots > Settings > Shortcuts > Paste customized [`prompt.md`](prompt.md) > Save as `/job-evaluator`
+- **Method 2:** Send customized prompt in chat > Hover > Click save icon > Name it `/job-evaluator`
+
+Then use: Paste JD text, type `/job-evaluator`, instant analysis
 
 ---
 
