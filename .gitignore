@@ -1,0 +1,39 @@
+# Personal customizations
+prompt-custom.md
+my-background.md
+
+# API keys and credentials
+.env
+*.key
+*.pem
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+venv/
+env/
+ENV/
+
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Personal notes
+NOTES.md
+TODO.md
+scratch/
