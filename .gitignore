@@ -1,6 +1,8 @@
 # Personal customizations
 prompt-custom.md
 my-background.md
+CLAUDE.md
+claude.md
 
 # API keys and credentials
 .env
@@ -37,3 +39,6 @@ yarn-error.log
 NOTES.md
 TODO.md
 scratch/
+linkedin-post-draft.md
+*-draft.md
+~$*
