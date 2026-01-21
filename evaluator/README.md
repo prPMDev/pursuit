@@ -12,17 +12,18 @@
 
 **When:** Someone sends you a LinkedIn job post OR you find one yourself
 
-**What:** Run [`linkedin-evaluator-prompt.md`](linkedin-evaluator-prompt.md) in Claude in Chrome to get comprehensive intelligence:
+**What:** Run [`linkedin-evaluator-prompt.md`](linkedin-evaluator-prompt.md) in Claude in Chrome to get network intelligence:
 
 - **Poster credibility** - Are they active on LinkedIn? Worth reaching out?
 - **Network analysis** - Who do you know at the company? (1st/2nd degree)
-- **Message history** - When did you last talk to each connection? (Warm vs Cold)
+- **Message history (optional)** - When did you last talk to each connection? (Warm vs Cold)
 - **Timing signals** - How fresh is the post? Is the role still active?
 - **Hiring manager access** - Can you DM them directly?
 - **Entry strategy** - Ranked list of best paths in (warm referral → cool contact → cold)
-- **Initial fit assessment** - Is this even worth pursuing?
 
-**Output:** Intelligence report with recommendation (PURSUE / MAYBE / PASS)
+**Output:** Intelligence report with recommendation (PURSUE / MAYBE / PASS) based on network access and signals
+
+**NOTE:** This does NOT analyze job fit - that's Step 2
 
 **Time:** 3-5 minutes (runs autonomously in background)
 
@@ -30,15 +31,14 @@
 
 **When:** You decided to PURSUE after Step 1 (or you already have the JD text)
 
-**What:** Run [`HLL-job-eval-prompt.md`](HLL-job-eval-prompt.md) to get detailed fit assessment:
+**What:** Run [`HLL-job-eval-prompt.md`](HLL-job-eval-prompt.md) to get quick fit assessment:
 
-1. **Match Percentage** - Realistic fit score (60-70% is strong, not 90%+)
-2. **Strongest Stories** - Which experiences from your background align best
-3. **Gap Analysis** - What's missing and how to bridge it
-4. **Resume Positioning** - Surgical resume updates for this specific JD
-5. **Decision Recommendation** - Final confirmation with reasoning
+1. **Match Type** - Direct / Adjacent / Stretch / Pass
+2. **Level Fit** - Right fit / Too junior / Too senior
+3. **Red Flags** - Execution-only, unrealistic requirements, non-negotiables violated
+4. **Decision** - PURSUE / MAYBE / PASS with reasoning
 
-**Output:** Detailed fit analysis and resume positioning strategy
+**Output:** Quick fit categorization (saves detailed resume work for later)
 
 **Time:** Under 2 minutes
 
@@ -63,25 +63,31 @@
 5. Go to **Settings**
 6. Click **Shortcuts**
 7. Open [`linkedin-evaluator-prompt.md`](linkedin-evaluator-prompt.md)
-8. **Customize** the "Your Background" section with your real details
-9. Copy the entire customized prompt (from "WORKFLOW PROMPT STARTS HERE" section)
-10. Paste into the Shortcuts page
-11. Name it: `linkedin-evaluator`
-12. Save
+8. Copy the entire prompt **as-is** (no customization needed)
+9. Paste into the Shortcuts page
+10. Name it: `linkedin-evaluator`
+11. Save
 
 **Method 2: From Chat**
-1. Open [`linkedin-evaluator-prompt.md`](linkedin-evaluator-prompt.md) and customize your background
-2. Copy the entire customized prompt
+1. Open [`linkedin-evaluator-prompt.md`](linkedin-evaluator-prompt.md)
+2. Copy the entire prompt **as-is**
 3. In Claude in Chrome, paste and send it
 4. **Hover over the prompt you just sent**
 5. Click the **save icon** that appears
 6. Name it: `linkedin-evaluator`
 
+**IMPORTANT - First Few Runs:**
+For your first 2-3 runs, enable **"Ask before acting"** in Claude in Chrome:
+1. Open Claude in Chrome settings (three dots menu)
+2. Enable "Ask before acting"
+3. This lets you approve each step (navigating to profiles, checking messages, etc.)
+4. Once you trust the workflow, disable it for fully autonomous execution
+
 **Use:**
 1. Navigate to LinkedIn post with job opportunity
 2. Open Claude in Chrome panel
 3. Type `/linkedin-evaluator` and press Enter
-4. Step away - Claude runs autonomously
+4. Step away - Claude runs autonomously (or approve each step if "Ask before acting" is on)
 5. Come back to read intelligence report
 
 ### Job Evaluator (Step 2) - Any Claude Interface
@@ -109,21 +115,23 @@ Then use: Paste JD text, type `/job-evaluator`, instant analysis
 
 **Key Features:**
 - Autonomous workflow for Claude in Chrome
-- Poster credibility analysis (activity, amenability)
-- Network mapping with warm/cool/cold categorization
-- Message history checking (when did you last contact each person)
+- Poster credibility analysis (active vs ghost profile)
+- Network mapping (top 3-5 connections, 1st or 2nd degree)
+- Message history checking - OPTIONAL (warm/cool/cold categorization)
 - Hiring manager identification and DM access check
 - Timing signal analysis (fresh vs stale posts)
 - Entry strategy ranked by likelihood of success
+- **Does NOT analyze job fit** - focuses only on network access and signals
 
 ### Job Fit Analysis ([`HLL-job-eval-prompt.md`](HLL-job-eval-prompt.md))
 
 **Key Features:**
-- Structured fit analysis (not vibes-based)
-- Story-first matching (your experiences > keyword bingo)
-- Realistic expectations (60-70% fit is strong)
-- Actionable recommendations (not just "you should apply")
+- Quick fit categorization: Direct / Adjacent / Stretch / Pass
+- Level alignment check (right fit / too junior / too senior)
+- High-level domain and experience matching
+- Red flag detection (execution-only roles, unrealistic requirements)
 - Decision framework (Pursue/Maybe/Pass with reasoning)
+- **Lightweight** - saves detailed story/resume work for later (desktop/web project)
 
 ---
 
@@ -145,14 +153,17 @@ Each example shows:
 
 ## Customization
 
-The prompt is designed to be **personalized to you**. To adapt it:
+**LinkedIn Evaluator:**
+- **No customization needed** - Just copy and use as-is
+- Works the same for everyone (network intelligence is universal)
 
-1. Replace the sample background with your own experiences
-2. Update the skill framework with your strengths
-3. Adjust the "Pass" criteria to match your non-negotiables
-4. Tune the match percentage thresholds to your comfort level
-
-The evaluator is only as good as the context you give it about yourself.
+**Job Evaluator:**
+- **Update the "My Background" section** with:
+  - Your domain (e.g., "B2B SaaS product management, integrations")
+  - Years of experience
+  - Current and target level
+  - Non-negotiables (remote requirements, visa needs, role type)
+- That's it - keep it simple and high-level
 
 ---
 
@@ -180,12 +191,12 @@ The evaluator is only as good as the context you give it about yourself.
 
 ## Philosophy
 
-This evaluator is built on principles that go against typical job search advice:
+These evaluators are built on principles that go against typical job search advice:
 
-- **60-70% fit is enough.** Don't self-select out because you're "only" 70% qualified.
-- **Structural skills transfer.** If you've built integrations in fintech, you can build them in e-commerce. Domain is learnable.
-- **Story > keywords.** The evaluator finds narrative threads in your background, not just keyword matches.
-- **Quality > volume.** Better to pursue 5 well-matched jobs than spray 50 generic applications.
+- **Adjacent is OK.** Structural skills transfer across domains. If you've built integrations in fintech, you can do it in healthcare. Domain is learnable.
+- **Network first, fit second.** A warm connection at a 70% match beats no connection at a 90% match.
+- **Quick filtering, deep work later.** Use these evaluators to filter fast (network intel + basic fit), save detailed resume/story work for desktop project after both pass.
+- **Quality > volume.** Better to pursue 5 well-researched opportunities than spray 50 generic applications.
 
 ---
 
