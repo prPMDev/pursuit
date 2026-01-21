@@ -30,7 +30,7 @@
 
 **When:** You decided to PURSUE after Step 1 (or you already have the JD text)
 
-**What:** Run [`prompt.md`](prompt.md) to get detailed fit assessment:
+**What:** Run [`HLL-job-eval-prompt.md`](HLL-job-eval-prompt.md) to get detailed fit assessment:
 
 1. **Match Percentage** - Realistic fit score (60-70% is strong, not 90%+)
 2. **Strongest Stories** - Which experiences from your background align best
@@ -89,14 +89,14 @@
 **Option 1: Claude.ai**
 1. Go to [claude.ai](https://claude.ai)
 2. Start a new conversation
-3. Paste the contents of [`prompt.md`](prompt.md)
+3. Paste the contents of [`HLL-job-eval-prompt.md`](HLL-job-eval-prompt.md)
 4. Follow up with the job description you want to evaluate
 5. Review the analysis and decide
 
 **Option 2: Claude in Chrome (for repeat use)**
 
 Create `/job-evaluator` shortcut using either method:
-- **Method 1:** Three dots > Settings > Shortcuts > Paste customized [`prompt.md`](prompt.md) > Save as `/job-evaluator`
+- **Method 1:** Three dots > Settings > Shortcuts > Paste customized [`HLL-job-eval-prompt.md`](HLL-job-eval-prompt.md) > Save as `/job-evaluator`
 - **Method 2:** Send customized prompt in chat > Hover > Click save icon > Name it `/job-evaluator`
 
 Then use: Paste JD text, type `/job-evaluator`, instant analysis
@@ -116,7 +116,7 @@ Then use: Paste JD text, type `/job-evaluator`, instant analysis
 - Timing signal analysis (fresh vs stale posts)
 - Entry strategy ranked by likelihood of success
 
-### Job Fit Analysis ([`prompt.md`](prompt.md))
+### Job Fit Analysis ([`HLL-job-eval-prompt.md`](HLL-job-eval-prompt.md))
 
 **Key Features:**
 - Structured fit analysis (not vibes-based)
