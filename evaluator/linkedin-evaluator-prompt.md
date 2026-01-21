@@ -80,299 +80,88 @@ You are a LinkedIn job opportunity intelligence analyst. I am currently viewing 
 
 Execute the following steps autonomously. Open new tabs as needed to preserve the original post. Report findings in the format specified at the end.
 
-### Step 1: Extract Current Post Information
+### Step 1: Extract Post Info
 
-From the LinkedIn post currently visible:
-- Poster's name and title
-- Poster's company
-- Full post content (all text)
-- Date posted (or time ago - e.g., "2 days ago")
-- Engagement metrics (number of likes, comments)
-- Check if this is a repost (look for "reposted this" or similar indicator)
-- Extract job link URL if present (or note "No direct link")
-- Company name mentioned in post
-- Role title mentioned in post
+From current LinkedIn post, note:
+- Poster (name, title, company)
+- Post content, date, engagement
+- Repost indicator
+- Job link (if exists)
+- Company and role mentioned
 
-### Step 2: Analyze Poster's LinkedIn Profile
+### Step 2: Check Poster (Quick)
 
-Navigate to the poster's LinkedIn profile (click their name from the post).
+Go to poster's profile:
+- Check 3 recent posts/comments → Active or Ghost?
+- HR/Recruiter role? (higher amenability)
+- Worth reaching out? Yes/No
 
-**Activity Analysis (last 90 days):**
-- Scroll through their activity feed
-- Count approximate number of posts published
-- Count approximate number of comments made
-- Categorize activity level:
-  - **Active:** 10+ interactions per month (posts + comments)
-  - **Moderate:** 3-10 interactions per month
-  - **Low:** 1-3 interactions per month
-  - **Ghost:** 0 interactions (profile exists but inactive)
+### Step 3: Get Job Details (if link exists)
 
-**Amenability Signals:**
-- Check for "Open to Work" badge or hiring indicators
-- Note if they're in HR/Recruiting/Talent Acquisition role
-- Assess engagement style from recent posts/comments (helpful vs promotional vs unresponsive)
-- Check if profile is complete (photo, headline, about section)
-- Note if they have Premium or Recruiter badge
+Click job link, extract:
+- Role, level, location
+- Key requirements (top 5)
+- Date posted on job board
+- Application method
 
-**Amenability Score:**
-- **High:** Active user + HR/Recruiter role OR very engaged in comments
-- **Medium:** Moderate activity + professional engagement
-- **Low:** Ghost profile OR only promotional posts with no engagement
+Compare LinkedIn post date vs job board date (timing signal)
 
-**Recommendation on poster:**
-- Worth reaching out to directly? (Yes/No)
-- If No, why? (Inactive, unlikely to respond, etc.)
+### Step 4: Network Check
 
-### Step 3: Navigate to Job Posting (If Link Exists)
+Navigate to company's LinkedIn page → "See all employees" → Filter "1st degree connections"
 
-If the post contains a job link:
-- Click the link (may open company careers page or job board like Greenhouse, Lever, etc.)
-- Extract:
-  - Full job title
-  - Seniority level (IC/Manager, Junior/Mid/Senior/Staff)
-  - Location(s)
-  - Key requirements (top 5-7 bullet points)
-  - Date posted on job board (if visible)
-  - Application method (Easy Apply / External ATS / Email / Referral encouraged)
+**Find top 3-5 connections:**
+- List: Name, Title, Department
+- Note hiring influence: High (Manager/Director in relevant dept) / Medium (Senior IC) / Low (Junior/unrelated)
 
-**Timing Signal:**
-- Compare job board posting date with LinkedIn post date
-- If gap is >7 days: Note "Late signal - role may be partially filled"
-- If gap is <3 days: Note "Fresh signal - likely early in search"
-- If dates match: Note "Aligned timing"
+**If no 1st degree:** Check 2nd degree (top 3-5 only)
 
-If no job link:
-- Note "No direct job link - will need to search company careers page"
+**If none:** Note "No network - cold outreach required"
 
-### Step 4: Company Network Analysis
+### Step 5: Message History (OPTIONAL - Quick Check)
 
-Navigate to the company's LinkedIn page (search for company name).
+For top 3-5 connections from Step 4:
+- Go to LinkedIn Messages → Search name
+- Note last message date (if exists)
+- Tag: WARM (within 6mo) / COOL (6-12mo) / COLD (12mo+ or never)
 
-**1st Degree Connections:**
-- Click "See all employees" or use LinkedIn search: `[company name] site:linkedin.com/in/`
-- Filter for "1st degree connections" (your connections)
-- List ALL 1st degree connections found:
-  - Full name
-  - Current title
-  - Department (if visible - e.g., Engineering, Product, Sales)
-  - Potential hiring influence:
-    - **High:** Manager/Director/VP in relevant department
-    - **Medium:** Senior IC or adjacent team lead
-    - **Low:** Junior IC or unrelated department
+**Skip this step if you're short on time.**
 
-**2nd Degree Connections:**
-- Filter for "2nd degree connections"
-- List top 10 most relevant (prioritize by title/department relevance):
-  - Full name
-  - Current title
-  - Mutual connection (who connects you)
-  - Potential hiring influence (High/Medium/Low)
+### Step 6: Hiring Manager (Quick Look)
 
-If network is hidden or shows 0 connections:
-- Note "Company network not visible - may need cold outreach"
+From JD or network list, identify likely hiring manager (title match to role).
+- Check if DMs open (Message button visible) or closed (Connect only)
+- If not obvious, skip
 
-### Step 5: Message History Check (1st Degree Only)
+### Step 7: Signals
 
-For EACH 1st degree connection identified in Step 4:
-- Navigate to LinkedIn Messages (top navigation)
-- Search for their name in message search
-- If conversation exists:
-  - Note date of last message (sent or received)
-  - Note who sent last message (you or them)
-  - Categorize relationship warmth:
-    - **WARM:** Last contact within 6 months
-    - **COOL:** Last contact 6-12 months ago
-    - **COLD:** Last contact 12+ months ago
-- If no conversation exists:
-  - Categorize as: **COLD - Never Contacted**
+- **Timing:** How fresh is the post? (days since posted)
+- **Urgency:** Any urgency indicators in post text?
+- **Accessibility:** Easy to apply or reach poster?
 
-**Output for each connection:**
-- Name | Last contact: [Date or "Never"] | Warmth: [WARM/COOL/COLD] | Last interaction: [You sent / They sent / N/A]
+### Step 8: Fit & Recommendation
 
-### Step 6: Identify Hiring Manager
+Match background to JD:
+- Direct match / Adjacent (transferable) / Weak
 
-From network analysis and job posting details:
-- Identify most likely hiring manager based on:
-  - Title alignment (e.g., "Engineering Manager" for eng role, "Director of Product" for PM role)
-  - Department match
-  - Recent LinkedIn posts about hiring or team growth
-  - Mentioned in job posting
-
-If hiring manager identified:
-- Navigate to their profile
-- Check DM accessibility:
-  - **DMs Open:** "Message" button visible
-  - **DMs Closed:** Only "Connect" or "Follow" button visible
-- Note their activity level (Active/Moderate/Low/Ghost using same criteria as Step 2)
-
-If hiring manager NOT identified:
-- Note "Hiring manager not identified - may need to research further"
-
-### Step 7: Posting Signal Analysis
-
-**Timing Signals:**
-- Days since LinkedIn post: [Calculate from date in Step 1]
-  - <3 days: **Fresh**
-  - 3-7 days: **Active**
-  - 7-14 days: **Aging**
-  - 14+ days: **Stale**
-
-**Urgency Signals (check post content for keywords):**
-- Urgent keywords: "urgent", "ASAP", "immediate", "actively hiring", "multiple positions", "hiring now"
-- Repost indicator (from Step 1): If poster reposted = increased urgency
-- Engagement level: High likes/comments may indicate competitive role
-
-**Accessibility Signals (check post content):**
-- "DM me" or "message me" mentioned = **High accessibility**
-- "Apply here" with Easy Apply = **Medium accessibility**
-- External ATS or complex process = **Lower accessibility**
-- "Referrals encouraged" mentioned = **Referral-friendly**
-
-**Overall Urgency Assessment:** High / Medium / Low
-
-### Step 8: Fit Analysis & Intelligence Report
-
-**Map job requirements to my background:**
-- Identify which of my strongest experiences align with top requirements
-- Calculate fit percentage:
-  - 70%+ = Strong fit (structural skills match, domain is learnable)
-  - 50-70% = Decent fit (some gaps but bridgeable)
-  - <50% = Weak fit (significant gaps)
-- Note structural skill matches (transferable across domains)
-- Note domain gaps (industry-specific knowledge missing)
-
-**Compile findings into structured report below.**
+**Decision:** PURSUE / MAYBE / PASS (based on fit + network + timing)
 
 ---
 
 ## OUTPUT FORMAT
 
-Provide the intelligence report in this exact format:
+Organize findings into a clear report with these sections:
 
-```markdown
-# LinkedIn Post Intelligence Report
-## [Company Name] - [Role Title]
-
----
-
-### POST OVERVIEW
-- **Poster:** [Name], [Title] at [Company]
-- **Posted:** [Date/Time ago] | **Freshness:** [Fresh/Active/Aging/Stale]
-- **Engagement:** [X likes, Y comments]
-- **Repost:** [Yes/No]
-- **Job Link:** [URL or "Not provided"]
-
----
-
-### POSTER ANALYSIS
-- **Activity Level:** [Active/Moderate/Low/Ghost]
-  - Posts (90 days): ~[X]
-  - Comments (90 days): ~[Y]
-- **Amenability Score:** [High/Medium/Low]
-- **Signals:**
-  - [e.g., "Open to Work badge", "Recruiter role", "Engaged commenter", etc.]
-- **Worth Direct Outreach:** [Yes/No]
-- **Reasoning:** [1-2 sentences]
-
----
-
-### JOB POSTING DETAILS
-[If link exists, otherwise note "No job link provided"]
-
-- **Role:** [Full title]
-- **Level:** [Junior/Mid/Senior/Staff/Manager/etc.]
-- **Location:** [Location(s)]
-- **Posted on Job Board:** [Date] | **Timing Gap:** [X days from LinkedIn post or "Aligned"]
-- **Application Method:** [Easy Apply / External ATS / Email / Referral encouraged]
-
-**Top Requirements:**
-1. [Requirement 1]
-2. [Requirement 2]
-3. [Requirement 3]
-4. [Requirement 4]
-5. [Requirement 5]
-
----
-
-### FIT ANALYSIS
-- **Overall Fit:** [X%]
-- **Structural Skill Matches:** [List 3-5 transferable skills that align]
-- **Domain Gaps:** [What industry/context knowledge is missing - note if learnable]
-- **Strongest Stories from My Background:**
-  1. [Experience/Achievement] → Maps to [Requirement]
-  2. [Experience/Achievement] → Maps to [Requirement]
-  3. [Experience/Achievement] → Maps to [Requirement]
-
----
-
-### NETWORK INTELLIGENCE
-
-**1st Degree Connections: [X total]**
-
-[If connections found:]
-1. **[Name]** - [Title] | Last contact: [Date or "Never"] | **[WARM/COOL/COLD]** | Hiring influence: [High/Medium/Low]
-2. [Repeat for each connection]
-
-[If no connections:]
-- No 1st degree connections found at [Company]
-
-**2nd Degree Connections (Top 5):**
-
-[If connections found:]
-1. **[Name]** - [Title] | Via: [Mutual connection] | Influence: [High/Medium/Low]
-2. [Repeat for top 5]
-
-[If no connections:]
-- Limited 2nd degree visibility
-
-**Hiring Manager:**
-- **[Name]** - [Title] | DMs: [Open/Closed] | Activity: [Active/Moderate/Low]
-  OR
-- Not identified - requires further research
-
----
-
-### ENTRY STRATEGY
-
-**Recommended Path:**
-1. [e.g., "Reach out to [WARM Connection Name] - last spoke 2 months ago, high likelihood of response"]
-2. [e.g., "If no response in 48hr, try [COOL Connection Name] via mutual connection [Mutual Name]"]
-3. [e.g., "Direct message hiring manager [Name] - DMs open, active on LinkedIn"]
-   OR
-   [e.g., "No warm connections - cold outreach required via LinkedIn/company email"]
-
-**Timing Recommendation:** [Apply now / Wait for referral / Research more / Pass]
-
-**Urgency Level:** [High/Medium/Low]
-- Reasoning: [e.g., "Fresh post + urgent keywords + repost = competitive but active search"]
-
----
-
-### RED FLAGS
-[If any concerns identified, list them. Otherwise:]
-- None identified
-
-[Examples of red flags:]
-- "Job posted 3 weeks ago on job board but LinkedIn post today - may be backfill or slow search"
-- "Poster is ghost profile with 0 activity in 90 days - low response likelihood"
-- "No 1st/2nd degree connections + DMs closed - difficult access"
-- "Vague JD with unrealistic requirements (10 years for mid-level role)"
-
----
-
-### RECOMMENDATION: [PURSUE / MAYBE / PASS]
-
-**Reasoning:** [2-4 sentences explaining why based on fit, network access, timing, and signals]
-
-**Next Steps If Pursuing:**
-- [e.g., "Run /job-evaluator with JD text for detailed resume positioning"]
-- [e.g., "Reach out to [Warm Connection] within 24hr"]
-- [e.g., "Research company's recent product launches before applying"]
-
----
-
-**Report generated by LinkedIn Post Intelligence Evaluator**
-```
+1. **Post Overview** - Poster info, freshness, engagement, job link
+2. **Poster Analysis** - Activity level (Active/Ghost), worth reaching out
+3. **Job Details** - Role, level, location, key requirements (if link exists)
+4. **Fit** - Direct/Adjacent/Weak match to your background
+5. **Network** - Top 3-5 connections (1st or 2nd degree), warmth if checked
+6. **Hiring Manager** - If identified, DM accessibility
+7. **Signals** - Timing (Fresh/Stale), urgency, accessibility
+8. **Red Flags** - If any
+9. **Decision** - PURSUE / MAYBE / PASS with reasoning
+10. **Entry Strategy** - If pursuing, ranked path (warm connection → cool → cold → direct)
 
 ---
 
