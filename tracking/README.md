@@ -1,109 +1,137 @@
-# Tracking (Planned)
+# Tracking
 
-**Status:** 🚧 Not yet built
+**Status:** ✅ Working - Notion Template
 
-**Purpose:** Job opportunity pipeline management. Track what you've applied for, who you contacted, what happened. Never lose track of follow-ups.
-
----
-
-## Vision
-
-You've evaluated jobs. You've built application strategies. You've applied.
-
-Now you need to track:
-- Which jobs did I apply for?
-- What stage am I in? (Applied → Phone screen → Onsite → Offer/Reject)
-- Who did I reach out to for referrals? Did they respond?
-- When should I follow up?
-- What happened? (Outcomes, lessons learned)
+**Purpose:** Job opportunity pipeline management. Track what you're pursuing, who you've contacted, and what stage you're in. Never lose track of follow-ups.
 
 ---
 
-## Key Features (Wishlist)
+## Overview
 
-### 1. Opportunity Pipeline
-- **Status tracking:** Not Applied → Applied → Screening → Interview → Offer/Reject
-- **Timeline:** When did I apply? When did they respond? Next follow-up date?
-- **Notes:** Interview feedback, red flags, cultural observations
-- **Outcome:** Offer details (salary, equity, benefits) or rejection reasons
+After the evaluators give you a **PURSUE** decision, you need somewhere to track that opportunity. This module uses Notion as the tracking system with two linked databases:
 
-### 2. Contact Management
-- Who did I contact at each company? (Referrals, hiring managers, recruiters)
-- What's the status of each outreach? (Sent → Responded → Call scheduled)
-- When to follow up?
-- Relationship notes (how I know them, context)
+1. **Opportunity Tracker** - Companies and roles you're pursuing
+2. **Contact Tracker** - People at those companies (hiring managers, referrals, recruiters)
 
-### 3. Follow-Up Automation
-- Remind me when to follow up (1 week after application, 3 days after interview, etc.)
-- Draft follow-up messages based on stage
-- Track what I promised to send (references, work samples, case studies)
-
-### 4. Analytics/Insights
-- Application → Interview conversion rate
-- Which sourcing methods work best? (Referrals vs cold apply vs recruiter reach-out)
-- Time to offer (how long does my job search take on average?)
-- Lessons learned (what worked, what didn't)
+The databases are **related** - each contact links to an opportunity, giving you a complete view of your pipeline.
 
 ---
 
-## Possible Approaches
+## Recommended Schema
 
-### Option 1: Notion Database
-- Simple, flexible, no code required
-- Databases for Opportunities + Contacts
-- Manual entry but powerful views/filtering
-- Can integrate with Strategist module
+### 1. Opportunity Tracker
 
-### Option 2: Airtable
-- More structured than Notion
-- Better for relational data (linking opportunities to contacts)
-- Built-in automation/reminders
-- API for integration with other modules
+Track companies and roles in your pipeline.
 
-### Option 3: Custom App/Script
-- Full control over features
-- Could auto-populate from email (parse application confirmations)
-- Higher effort, more powerful
-- Probably overkill for most users
+| Field | Type | Purpose | Source |
+|-------|------|---------|--------|
+| Company Name | Title | Primary identifier | Job post |
+| Job URL | URL | Link to job posting | LinkedIn/careers page |
+| Role | Text | Job title | Job post |
+| Status | Select | Pipeline stage | Manual |
+| Location | Select | Work location | Job post |
+| Industry/Theme | Select | Domain category | Job post |
+| Why a Good Fit | Text | Fit reasoning | HLL Evaluator |
+| Network First | Select | Network access level | LinkedIn Evaluator |
+| Date Added | Date | When added to pipeline | Auto |
+| Tailored Resume | Files | Custom resume for this role | Manual |
+| Contacts | Relation | People at this company | Link to Contact Tracker |
 
-### Option 4: Spreadsheet (Google Sheets / Excel)
-- Low-tech, universally accessible
-- Easy to customize
-- No fancy automation but gets the job done
-- Can be enhanced with scripts (Apps Script, Python)
+### 2. Contact Tracker
+
+Track people at each company and your outreach status.
+
+| Field | Type | Purpose | Source |
+|-------|------|---------|--------|
+| Name | Title | Contact's name | LinkedIn Evaluator |
+| Company | Relation | Links to Opportunity | Link to Opportunity Tracker |
+| Role | Text | Their job title | LinkedIn |
+| LinkedIn URL | URL | Profile link | LinkedIn Evaluator |
+| Email | Email | Contact email | Hunter.io, research |
+| Contact Type | Select | How you know them | LinkedIn Evaluator |
+| Outreach Status | Select | Where you are in outreach | Manual |
+| Last Contacted | Date | For follow-up timing | Manual |
+| Notes | Text | Context, conversation notes | Manual |
 
 ---
 
-## Why Not Build This Yet?
+## How Evaluator Outputs Map to Notion
 
-Focus is on **decision-making** (Evaluator) and **strategy** (Strategist) first. Tracking is important but not the bottleneck.
+When you get a **PURSUE** from both evaluators, here's what goes where:
 
-**Priority:** Evaluator → Strategist → Scanner → Tracking
+### From LinkedIn Evaluator → Notion
 
-That said, many people already have tracking systems (spreadsheets, Notion, etc.). This module should integrate with what you already use, not replace it.
+| Evaluator Output | → | Notion Field |
+|------------------|---|--------------|
+| Company name | → | Company Name (Opportunity) |
+| Job post URL | → | Job URL (Opportunity) |
+| Network access assessment | → | Network First (Opportunity) |
+| Hiring manager name | → | New Contact entry |
+| Hiring manager LinkedIn | → | LinkedIn URL (Contact) |
+| Warm connections (top 3-5) | → | New Contact entries |
+| Entry strategy notes | → | Notes (Contact) |
+
+### From HLL Evaluator → Notion
+
+| Evaluator Output | → | Notion Field |
+|------------------|---|--------------|
+| Role title | → | Role (Opportunity) |
+| Fit assessment | → | Why a Good Fit (Opportunity) |
+| Match type (Direct/Adjacent/Stretch) | → | Can inform Status priority |
+
+---
+
+## Setup
+
+Create two Notion databases matching the schemas above, then link them via a Relation property. The key is having **Opportunities ↔ Contacts** connected so you can see all people at each company.
+
+---
+
+## Workflow
+
+```
+LinkedIn Post
+     ↓
+┌─────────────────────┐
+│ LinkedIn Evaluator  │ → PURSUE / PASS
+│ (network intel)     │
+└─────────────────────┘
+     ↓ (if PURSUE)
+┌─────────────────────┐
+│ HLL Evaluator       │ → PURSUE / MAYBE / PASS
+│ (job fit)           │
+└─────────────────────┘
+     ↓ (if PURSUE)
+┌─────────────────────┐
+│ Add to Notion       │
+│ - Create Opportunity│
+│ - Add Contacts      │
+│ - Set Status        │
+└─────────────────────┘
+     ↓
+Work the opportunity
+(outreach, apply, interview)
+```
+
+---
+
+## Tips
+
+- **Update Last Contacted** every time you reach out - this powers follow-up reminders
+- **Use Notes liberally** - capture conversation context, what they said, what you promised
+- **Move Contacts to Closed** when they're no longer relevant (declined to help, role filled, etc.)
+- **Don't over-track** - only add opportunities you're genuinely pursuing (this is anti-mass-apply)
 
 ---
 
 ## Integration with Other Modules
 
-- **Evaluator:** When you evaluate a job, option to "Add to pipeline" (creates tracking entry)
-- **Strategist:** Strategy notes (referrals, positioning) stored in tracking database
-- **Scanner:** New jobs automatically added to "Not Yet Evaluated" status
-
-The tracking module is the **connective tissue** between the other modules.
+- **Evaluator** outputs flow into Notion when you decide to PURSUE
+- **Strategist** (future) will help craft outreach messages using Contact data
+- **Scanner** (future) could auto-add opportunities to "Not Started" status
 
 ---
 
-## Contributing
+## Alternative Approaches
 
-If you want to build this module:
-- Start simple: A Notion template or Google Sheet
-- Define the schema (what fields are essential?)
-- Build views/filters for common workflows (active applications, overdue follow-ups, etc.)
-- Consider integration points with Evaluator/Strategist
-
-Open an issue or PR to discuss design.
-
----
-
-**The tracking module should reduce anxiety, not create busywork.**
+The same schema works in Airtable, Google Sheets, or a custom app. The key is having **two linked entities** (Opportunities ↔ Contacts) with status tracking for both.

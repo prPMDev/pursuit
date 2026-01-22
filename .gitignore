@@ -3,6 +3,7 @@ prompt-custom.md
 my-background.md
 CLAUDE.md
 claude.md
+.claude/
 
 # API keys and credentials
 .env
