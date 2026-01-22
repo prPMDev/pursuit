@@ -3,7 +3,6 @@
 **Date Evaluated:** 2025-01-21
 **Evaluator Used:** LinkedIn Post Intelligence Evaluator
 **Decision:** PURSUE ✅
-**Outcome:** In Progress
 
 ---
 
@@ -125,22 +124,16 @@
 
 ---
 
-## User Decision
+## Why PURSUE Decision Made Sense
 
-**Decided to PURSUE** based on:
 - Strong warm bridge (Connection A commented on post, last spoke 6 months ago)
 - Direct hiring manager posting (not recruiter)
 - Platform/API experience is direct match
 - 17 connections provide multiple fallback paths
+- Fresh timing (2h post, actively promoted)
+- High accessibility (HM's DMs open, warm connection available)
 
-**Next Steps:**
-1. Reach out to Connection A within 24 hours
-2. If warm intro received, prepare for conversation with hiring manager
-3. Run Job Evaluator (Step 2) with full JD for fit analysis
-
-## Outcome Notes
-
-_To be updated after outreach/application_
+**Recommended Next Step:** Reach out to Connection A first for warm intro
 
 ---
 

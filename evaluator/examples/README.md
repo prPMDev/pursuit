@@ -8,8 +8,9 @@ Each example shows:
 - **LinkedIn Intelligence Report** - Network analysis, poster credibility, timing signals, entry strategy
 - **Job Fit Analysis** (if applicable) - Direct/Adjacent/Stretch categorization
 - The decision made (Pursue/Maybe/Pass)
-- Reasoning and next steps
-- Outcome (if pursued - interview? offer? rejection?)
+- Reasoning behind the decision
+
+**Note:** These are evaluation examples only. What happens after you pursue (outreach, interviews, outcomes) belongs in the **Tracking** module (future).
 
 ## Why Examples Matter
 
@@ -37,9 +38,8 @@ If you use the evaluators and want to share your results:
 2. Include:
    - LinkedIn Intelligence Report (anonymized connection names)
    - Job Fit Analysis (if you ran Step 2)
-   - Your decision and reasoning
-   - Next steps taken
-   - Outcome (if you pursued)
+   - Your decision (Pursue/Maybe/Pass)
+   - Reasoning behind the decision
 3. Submit a PR or open an issue with your example
 
 See existing examples for format reference.
