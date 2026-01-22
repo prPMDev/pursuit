@@ -67,13 +67,17 @@ From JD or network list, identify likely hiring manager (title match to role).
 
 ### Step 8: Recommendation
 
-**Decision:** PURSUE / MAYBE / PASS
+**Decision:** PURSUE or PASS (binary - no maybe)
 
-Based on:
-- Network access (warm connections available?)
-- Poster credibility (active, worth reaching out?)
-- Timing (fresh vs stale)
-- Accessibility (easy to apply/contact?)
+**PURSUE if:**
+- You have warm/cool connections (network access exists)
+- OR poster is credible + accessible (active, DMs open)
+- OR fresh timing + low applicant count (early opportunity)
+
+**PASS if:**
+- No network access + ghost poster + stale post
+- OR all signals point to low accessibility
+- OR clear red flags (bad timing, wrong location, etc.)
 
 ---
 
@@ -88,10 +92,10 @@ Organize findings into a clear report with these sections:
 5. **Hiring Manager** - If identified, DM accessibility
 6. **Signals** - Timing (Fresh/Stale), urgency, accessibility
 7. **Red Flags** - If any
-8. **Decision** - PURSUE / MAYBE / PASS with reasoning (based on network access + signals, NOT fit)
-9. **Entry Strategy** - If pursuing, ranked path (warm connection → cool → cold → direct)
+8. **Decision** - PURSUE or PASS (binary) with reasoning (based on network access + signals, NOT fit)
+9. **Entry Strategy** - If PURSUE, ranked path (warm connection → cool → cold → direct). If PASS, skip this.
 
-**Note:** This evaluator does NOT analyze job fit. That's the job evaluator's role. Focus on network intelligence and accessibility.
+**Note:** This evaluator is a FILTER. PURSUE = run job evaluator next. PASS = move on. Does NOT analyze job fit.
 
 ---
 
