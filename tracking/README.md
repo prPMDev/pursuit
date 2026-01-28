@@ -132,6 +132,10 @@ Work the opportunity
 
 ---
 
+## Known Limitations
+
+**Notion MCP (Claude Code/Desktop):** Creating entries via MCP is currently unreliable (~40% failure rate due to parameter formatting issues - [tracked here](https://github.com/makenotion/notion-mcp-server/issues/74)). Workaround: MCP works for reading/querying; use manual entry for creates until Anthropic fixes this.
+
 ## Alternative Approaches
 
 The same schema works in Airtable, Google Sheets, or a custom app. The key is having **two linked entities** (Opportunities ↔ Contacts) with status tracking for both.
