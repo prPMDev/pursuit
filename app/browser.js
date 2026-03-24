@@ -273,7 +273,7 @@ async function getJobSummary(page, job) {
           // Get first ~500 chars as summary
           const text = el.textContent.trim();
           const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-          return lines.slice(0, 8).join('\n');
+          return lines.slice(0, 15).join('\n');
         }
       }
       return '';

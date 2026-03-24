@@ -354,7 +354,9 @@ app.post('/api/evaluate/:id', async (req, res) => {
     const evalPrompt = await readMarkdown(EVALUATOR_PROMPT);
     if (!evalPrompt) return res.status(500).json({ error: 'Evaluator prompt not found' });
 
-    const userMessage = jobDescription || `Please evaluate the job with ID: ${id}`;
+    const userMessage = profile
+      ? `## My Background\n\n${profile}\n\n## Job Description\n\n${jobDescription || `Job ID: ${id}`}`
+      : jobDescription || `Please evaluate the job with ID: ${id}`;
     const result = await callClaude(evalPrompt, userMessage);
 
     const filename = `${datePrefix()}-${id}.md`;
@@ -727,7 +729,7 @@ app.post('/api/fetch-and-scan', async (req, res) => {
       dataDir: DATA,
       headless: true,
       maxPages: 3,
-      getSummaries: false,
+      getSummaries: true,
     });
 
     fetchInProgress = false;

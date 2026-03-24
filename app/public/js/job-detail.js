@@ -202,7 +202,11 @@ function buildEvalDescription() {
   return [
     `Company: ${currentJob.company}`,
     `Role: ${currentJob.role}`,
-    currentJob.keySignal ? `Key details: ${currentJob.keySignal}` : '',
+    currentJob.location ? `Location: ${currentJob.location}` : '',
+    currentJob.source ? `Source: ${currentJob.source}` : '',
+    currentJob.link ? `Link: ${currentJob.link}` : '',
+    currentJob.summary ? `Summary:\n${currentJob.summary}` : '',
+    currentJob.keySignal ? `Key signal: ${currentJob.keySignal}` : '',
     currentJob.narrative ? `Scanner notes: ${currentJob.narrative}` : '',
   ].filter(Boolean).join('\n');
 }
