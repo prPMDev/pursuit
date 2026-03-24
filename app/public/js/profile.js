@@ -1,5 +1,38 @@
 // Pursuit Dashboard — Profile editor
-import { api, showModal, hideModal, updateProfileStrip } from './app.js';
+import { api, updateProfileStrip } from './app.js';
+import { showModal, hideModal } from './modal.js';
+import { html } from './util.js';
+import { icon } from './icons.js';
+
+export function renderProfileModal() {
+  const container = document.getElementById('modal-container');
+  const el = document.createElement('div');
+  el.className = 'modal hidden';
+  el.id = 'modal-profile';
+  el.innerHTML = html`
+    <div class="modal-content modal-wide">
+      <div class="modal-header">
+        <h3>Professional Profile</h3>
+        <button class="btn btn-icon-only modal-close" data-modal="modal-profile">${icon('x', 16)}</button>
+      </div>
+      <p class="modal-hint">Your professional identity. Be specific, be honest. The Scanner works better when you are.</p>
+      <textarea id="input-profile" rows="20" placeholder="Loading profile..."></textarea>
+      <div class="modal-actions">
+        <button class="btn" data-modal="modal-profile">Cancel</button>
+        <button class="btn btn-primary" id="btn-save-profile">Save Profile</button>
+      </div>
+    </div>
+  `;
+  container.appendChild(el);
+
+  // Close handlers
+  el.querySelectorAll('[data-modal]').forEach(btn => {
+    btn.addEventListener('click', () => hideModal('modal-profile'));
+  });
+  el.addEventListener('click', (e) => {
+    if (e.target === el) hideModal('modal-profile');
+  });
+}
 
 export function initProfile() {
   // Open profile modal

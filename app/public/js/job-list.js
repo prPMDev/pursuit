@@ -1,6 +1,7 @@
 // Pursuit Dashboard — Job List (left panel)
 import { api } from './app.js';
 import { showJobDetail } from './job-detail.js';
+import { escapeHtml } from './util.js';
 
 let allJobs = [];
 let currentFilter = 'all';
@@ -39,11 +40,11 @@ function renderJobList() {
   if (filtered.length === 0) {
     container.innerHTML = '';
     container.appendChild(emptyState);
-    emptyState.style.display = 'block';
+    emptyState.classList.remove('hidden');
     return;
   }
 
-  emptyState.style.display = 'none';
+  emptyState.classList.add('hidden');
 
   container.innerHTML = filtered.map(job => {
     const actionClass = (job.action || 'unscanned').toLowerCase();
@@ -83,8 +84,3 @@ function renderJobList() {
   });
 }
 
-function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text || '';
-  return div.innerHTML;
-}

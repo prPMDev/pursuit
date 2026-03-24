@@ -1,5 +1,6 @@
 // Pursuit Dashboard — First-Time Setup Flow
 import { api, showLoading, hideLoading } from './app.js';
+import { escapeHtml, html } from './util.js';
 
 const conversationHistory = {};
 let currentStepIndex = 0;
@@ -56,6 +57,30 @@ Tomorrow morning (or right now), click **Fetch Jobs** and I'll find what's worth
 Remember: the goal isn't to find more jobs. It's to find the right ones.`,
 };
 
+export function renderSetupOverlay() {
+  const container = document.getElementById('overlay-container');
+  const el = document.createElement('div');
+  el.className = 'setup-overlay hidden';
+  el.id = 'setup-overlay';
+  el.innerHTML = html`
+    <div class="setup-container">
+      <div class="setup-header">
+        <h2>Pursuit Setup</h2>
+        <span class="setup-progress" id="setup-progress">Step 1 of 9</span>
+      </div>
+      <div class="setup-chat" id="setup-chat"></div>
+      <div class="setup-input-area">
+        <textarea id="setup-input" rows="4" placeholder="Type your response..." class="hidden"></textarea>
+        <div class="setup-actions">
+          <button class="btn btn-primary hidden" id="setup-send">Send</button>
+          <button class="btn btn-primary hidden" id="setup-next">Let's go</button>
+        </div>
+      </div>
+    </div>
+  `;
+  container.appendChild(el);
+}
+
 export async function checkSetupNeeded() {
   try {
     const status = await api('/setup/status');
@@ -66,50 +91,45 @@ export async function checkSetupNeeded() {
 }
 
 export function showSetup() {
-  document.getElementById('setup-overlay').style.display = 'flex';
+  document.getElementById('setup-overlay').classList.remove('hidden');
   currentStepIndex = 0;
   renderStep();
 }
 
 export function hideSetup() {
-  document.getElementById('setup-overlay').style.display = 'none';
+  document.getElementById('setup-overlay').classList.add('hidden');
 }
 
 function renderStep() {
   const step = STEPS[currentStepIndex];
-  const container = document.getElementById('setup-chat');
   const input = document.getElementById('setup-input');
   const sendBtn = document.getElementById('setup-send');
   const nextBtn = document.getElementById('setup-next');
   const progress = document.getElementById('setup-progress');
 
-  // Progress
   progress.textContent = `Step ${currentStepIndex + 1} of ${STEPS.length}`;
 
-  // Show the step prompt
   if (STEP_PROMPTS[step.id]) {
     addMessage('assistant', STEP_PROMPTS[step.id]);
   }
 
-  // Configure input area
   if (step.action === 'next' || step.action === 'complete') {
-    input.style.display = 'none';
-    sendBtn.style.display = 'none';
-    nextBtn.style.display = 'inline-block';
+    input.classList.add('hidden');
+    sendBtn.classList.add('hidden');
+    nextBtn.classList.remove('hidden');
     nextBtn.textContent = step.action === 'complete' ? 'Start Using Pursuit' : "Let's go";
   } else if (step.action === 'synthesize') {
-    input.style.display = 'none';
-    sendBtn.style.display = 'none';
-    nextBtn.style.display = 'none';
-    // Auto-run synthesis
+    input.classList.add('hidden');
+    sendBtn.classList.add('hidden');
+    nextBtn.classList.add('hidden');
     runSynthesis();
   } else {
-    input.style.display = 'block';
+    input.classList.remove('hidden');
     input.placeholder = step.id === 'loved' || step.id === 'hated' || step.id === 'maybe'
       ? 'Paste a job listing here, then explain why...'
       : 'Type your response...';
-    sendBtn.style.display = 'inline-block';
-    nextBtn.style.display = 'none';
+    sendBtn.classList.remove('hidden');
+    nextBtn.classList.add('hidden');
     input.focus();
   }
 }
@@ -129,15 +149,12 @@ async function sendMessage() {
   const message = input.value.trim();
   if (!message) return;
 
-  // Show user message
   addMessage('user', message);
   input.value = '';
 
-  // Track conversation
   if (!conversationHistory[step.id]) conversationHistory[step.id] = [];
   conversationHistory[step.id].push({ role: 'user', content: message });
 
-  // Call Claude
   showLoading('Thinking...');
   try {
     const result = await api('/setup/chat', {
@@ -153,7 +170,6 @@ async function sendMessage() {
     addMessage('assistant', result.response);
     conversationHistory[step.id].push({ role: 'assistant', content: result.response });
 
-    // Save reference examples
     if (['loved', 'hated', 'maybe'].includes(step.id) && result.extracted) {
       await api('/references', {
         method: 'POST',
@@ -166,7 +182,6 @@ async function sendMessage() {
       });
     }
 
-    // Save search queries
     if (step.id === 'search' && result.extracted?.queries) {
       await api('/setup/save-queries', {
         method: 'POST',
@@ -174,9 +189,8 @@ async function sendMessage() {
       });
     }
 
-    // Show "Continue" button after Claude responds
     const nextBtn = document.getElementById('setup-next');
-    nextBtn.style.display = 'inline-block';
+    nextBtn.classList.remove('hidden');
     nextBtn.textContent = 'Continue';
 
   } catch (err) {
@@ -201,7 +215,6 @@ async function runSynthesis() {
 
     hideLoading();
 
-    // Save the profile
     await api('/setup/save-profile', {
       method: 'POST',
       body: { profileText: result.response },
@@ -210,14 +223,12 @@ async function runSynthesis() {
     addMessage('assistant', result.response);
     addMessage('assistant', '\nProfile saved. Let me suggest some search queries for you.');
 
-    // Auto-advance to search step
     currentStepIndex++;
     setTimeout(() => renderStep(), 1500);
 
   } catch (err) {
     hideLoading();
     addMessage('assistant', `Profile synthesis failed: ${err.message}. You can set up your profile manually later.`);
-    // Skip to done
     currentStepIndex = STEPS.length - 1;
     renderStep();
   }
@@ -242,10 +253,8 @@ function advanceStep() {
 }
 
 export function initSetup() {
-  // Send button
   document.getElementById('setup-send')?.addEventListener('click', sendMessage);
 
-  // Enter key to send
   document.getElementById('setup-input')?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -253,12 +262,5 @@ export function initSetup() {
     }
   });
 
-  // Next/Continue button
   document.getElementById('setup-next')?.addEventListener('click', advanceStep);
-}
-
-function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text || '';
-  return div.innerHTML;
 }

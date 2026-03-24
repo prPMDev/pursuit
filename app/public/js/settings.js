@@ -1,6 +1,61 @@
 // Pursuit Dashboard — Settings panel
-import { api, showModal, showLoading, hideLoading } from './app.js';
+import { api, showLoading, hideLoading } from './app.js';
+import { showModal, hideModal } from './modal.js';
 import { refreshJobList } from './job-list.js';
+import { html } from './util.js';
+import { icon } from './icons.js';
+
+export function renderSettingsModal() {
+  const container = document.getElementById('modal-container');
+  const el = document.createElement('div');
+  el.className = 'modal hidden';
+  el.id = 'modal-settings';
+  el.innerHTML = html`
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Settings</h3>
+        <button class="btn btn-icon-only modal-close" data-modal="modal-settings">${icon('x', 16)}</button>
+      </div>
+      <div class="settings-section">
+        <h4>API Key</h4>
+        <div id="api-key-status"></div>
+      </div>
+      <div class="settings-section">
+        <h4>Search Queries (for Fetch Jobs)</h4>
+        <p class="modal-hint">One per line. Format: <code>query | location | sources</code><br>
+          Example: <code>Senior PM Integrations | Remote | linkedin, indeed</code></p>
+        <textarea id="input-search-queries" rows="4" placeholder="Senior Product Manager | Remote | linkedin, indeed"></textarea>
+        <div style="margin-top: 6px;">
+          <button class="btn btn-sm btn-primary" id="btn-save-queries">Save Queries</button>
+        </div>
+      </div>
+      <div class="settings-section">
+        <h4>Prompts in Use</h4>
+        <div id="prompts-info"></div>
+      </div>
+      <div class="settings-section">
+        <h4>Fetch Limits</h4>
+        <p>3 fetches per day. Jobs are posted when they're posted — your energy is better spent pursuing than pulling.</p>
+        <p style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">
+          Future: scheduled daily fetch at a time you choose (e.g., 8am before coffee).
+        </p>
+      </div>
+      <div class="settings-section">
+        <h4>Data</h4>
+        <p><a href="#" id="btn-view-decisions">View Decision Log</a></p>
+      </div>
+    </div>
+  `;
+  container.appendChild(el);
+
+  // Close handlers
+  el.querySelectorAll('[data-modal]').forEach(btn => {
+    btn.addEventListener('click', () => hideModal('modal-settings'));
+  });
+  el.addEventListener('click', (e) => {
+    if (e.target === el) hideModal('modal-settings');
+  });
+}
 
 export function initSettings() {
   // Open settings modal
@@ -14,7 +69,6 @@ export function initSettings() {
     const textarea = document.getElementById('input-search-queries');
     const lines = textarea.value.split('\n').filter(l => l.trim());
     const queries = lines.map(line => {
-      // Format: "query | location | sources" or just "query"
       const parts = line.split('|').map(p => p.trim());
       return {
         query: parts[0] || '',
@@ -36,7 +90,6 @@ export function initSettings() {
 
   // Fetch Now button (in top bar)
   document.getElementById('btn-fetch-now')?.addEventListener('click', async () => {
-    // Check remaining fetches first
     try {
       const status = await api('/fetch/status');
       if (status.remaining <= 0) {
@@ -57,7 +110,6 @@ export function initSettings() {
         await refreshJobList();
       }
 
-      // Show the nudge
       if (result.nudge) {
         showNudge(result.nudge, result.remaining);
       }
@@ -68,7 +120,6 @@ export function initSettings() {
       if (err.message.includes('No search queries')) {
         alert('No search queries configured. Open Settings to add them.');
       } else if (err.message.includes('nudge') || err.message.includes('scanned 3') || err.message.includes('Three') || err.message.includes('Nope') || err.message.includes('slot machine') || err.message.includes('refresh')) {
-        // This is a rate limit nudge — show it nicely, not as an error
         showNudge(err.message, 0);
         updateFetchCounter(0);
       } else {
@@ -96,13 +147,11 @@ async function loadSettingsUI() {
   try {
     const settings = await api('/settings');
 
-    // API key status
     const keyStatus = document.getElementById('api-key-status');
     keyStatus.innerHTML = settings.apiKeyConfigured
       ? '<p style="color: var(--green);">&#x2713; API key configured (in .env file)</p>'
       : '<p style="color: var(--red);">&#x2717; No API key. Add ANTHROPIC_API_KEY to app/.env</p>';
 
-    // Search queries
     const queriesArea = document.getElementById('input-search-queries');
     if (queriesArea && settings.searchQueries) {
       queriesArea.value = settings.searchQueries.map(q => {
@@ -113,7 +162,6 @@ async function loadSettingsUI() {
       }).join('\n');
     }
 
-    // Prompts info
     const promptsInfo = document.getElementById('prompts-info');
     promptsInfo.innerHTML = `
       <p><strong>Scanner:</strong> ${settings.prompts?.scanner ? 'Loaded' : 'Not found'}</p>
@@ -123,7 +171,6 @@ async function loadSettingsUI() {
       </p>
     `;
 
-    // Last fetch time
     if (settings.lastFetchTime) {
       updateFetchStatus(`Last fetched: ${timeAgo(settings.lastFetchTime)}`);
     }
@@ -138,7 +185,6 @@ async function loadFetchStatus() {
     if (settings.lastFetchTime) {
       updateFetchStatus(`Last fetched: ${timeAgo(settings.lastFetchTime)}`);
     }
-    // Set fetch counter
     const status = await api('/fetch/status');
     updateFetchCounter(status.remaining);
   } catch { /* ignore */ }
@@ -150,33 +196,19 @@ function updateFetchStatus(text) {
 }
 
 function showNudge(message, remaining) {
-  // Remove existing nudge if any
   document.getElementById('nudge-bar')?.remove();
 
   const bar = document.createElement('div');
   bar.id = 'nudge-bar';
-  bar.style.cssText = `
-    position: fixed; bottom: 0; left: 0; right: 0;
-    padding: 12px 20px; background: #1c1917; color: #fafaf9;
-    font-size: 13px; line-height: 1.5; text-align: center;
-    z-index: 300; animation: slideUp 0.3s ease;
-  `;
+  bar.className = 'nudge-bar';
 
   const remainingText = remaining !== undefined
-    ? ` <span style="opacity: 0.5; margin-left: 8px;">${remaining} scan${remaining !== 1 ? 's' : ''} remaining today</span>`
+    ? `<span class="nudge-remaining">${remaining} scan${remaining !== 1 ? 's' : ''} remaining today</span>`
     : '';
 
-  bar.innerHTML = `
-    ${message}${remainingText}
-    <button onclick="this.parentElement.remove()" style="
-      background: none; border: none; color: #a8a29e; cursor: pointer;
-      margin-left: 12px; font-size: 16px;
-    ">&times;</button>
-  `;
+  bar.innerHTML = `${message}${remainingText}<button class="nudge-close" onclick="this.parentElement.remove()">&times;</button>`;
 
   document.body.appendChild(bar);
-
-  // Auto-dismiss after 8 seconds
   setTimeout(() => bar.remove(), 8000);
 }
 

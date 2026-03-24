@@ -1,30 +1,48 @@
-/* Pursuit Dashboard — Clean, calm, intentional */
+/* Pursuit Dashboard — Clean, calm, intentional
+   Design: Linear meets Huntr. Document-like, not dashboard-like.
+   Warm stone palette, generous whitespace, crisp typography. */
 
 :root {
   --bg: #fafaf9;
   --bg-panel: #ffffff;
   --bg-hover: #f5f5f4;
   --bg-active: #e7e5e4;
-  --border: #d6d3d1;
+  --bg-subtle: #fafaf9;
+  --border: #e7e5e4;
+  --border-light: #f0efed;
   --text: #1c1917;
+  --text-secondary: #57534e;
   --text-muted: #78716c;
   --text-light: #a8a29e;
 
   --green: #16a34a;
-  --green-bg: #dcfce7;
+  --green-bg: #f0fdf4;
+  --green-border: #bbf7d0;
   --amber: #d97706;
-  --amber-bg: #fef3c7;
+  --amber-bg: #fffbeb;
+  --amber-border: #fde68a;
   --red: #dc2626;
-  --red-bg: #fee2e2;
+  --red-bg: #fef2f2;
+  --red-border: #fecaca;
   --blue: #2563eb;
-  --blue-bg: #dbeafe;
+  --blue-bg: #eff6ff;
+  --blue-border: #bfdbfe;
   --gray: #6b7280;
-  --gray-bg: #f3f4f6;
+  --gray-bg: #f9fafb;
+  --gray-border: #e5e7eb;
 
-  --radius: 6px;
-  --radius-lg: 10px;
-  --shadow: 0 1px 3px rgba(0,0,0,0.06);
-  --shadow-lg: 0 4px 12px rgba(0,0,0,0.1);
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 20px;
+
+  --radius: 8px;
+  --radius-lg: 12px;
+  --radius-pill: 100px;
+  --shadow: 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 2px 8px rgba(0,0,0,0.06);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,0.08);
 
   --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   --font-mono: 'SF Mono', 'Fira Code', 'Consolas', monospace;
@@ -41,7 +59,14 @@ body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  -webkit-font-smoothing: antialiased;
 }
+
+/* --- Icons (Lucide inline SVGs) --- */
+
+.icon { display: inline-block; vertical-align: middle; flex-shrink: 0; }
+.btn-icon-inline { display: inline-flex; align-items: center; margin-right: 4px; }
+[data-icon] { display: inline-flex; align-items: center; }
 
 /* --- Top Bar --- */
 
@@ -49,7 +74,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 16px;
+  padding: 0 20px;
+  height: 48px;
   background: var(--bg-panel);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
@@ -57,30 +83,39 @@ body {
 
 .topbar-left {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 10px;
 }
 
 .logo {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 700;
-  letter-spacing: -0.5px;
+  letter-spacing: -0.3px;
 }
 
 .tagline {
-  font-size: 12px;
-  color: var(--text-muted);
+  font-size: 11px;
+  color: var(--text-light);
+  font-weight: 400;
 }
 
 .topbar-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+}
+
+.topbar-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--border);
+  margin: 0 4px;
 }
 
 .fetch-status {
-  font-size: 12px;
-  color: var(--text-muted);
+  font-size: 11px;
+  color: var(--text-light);
+  margin-right: 4px;
 }
 
 /* --- Profile Strip --- */
@@ -114,7 +149,6 @@ body {
 .detail-panel {
   flex: 1;
   overflow-y: auto;
-  padding: 20px 24px;
   background: var(--bg);
 }
 
@@ -122,24 +156,31 @@ body {
 
 .filter-bar {
   display: flex;
-  gap: 4px;
-  padding: 8px 10px;
+  justify-content: space-between;
+  padding: 8px 12px;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
 
+.filter-group {
+  display: flex;
+  gap: 2px;
+}
+
 .filter-btn {
-  padding: 4px 10px;
-  font-size: 12px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 500;
+  border: none;
+  border-radius: var(--radius-pill);
   background: transparent;
   cursor: pointer;
   color: var(--text-muted);
+  transition: all 0.15s;
 }
 
-.filter-btn:hover { background: var(--bg-hover); }
-.filter-btn.active { background: var(--text); color: white; border-color: var(--text); }
+.filter-btn:hover { background: var(--bg-hover); color: var(--text-secondary); }
+.filter-btn.active { background: var(--text); color: white; }
 
 /* --- Job List --- */
 
@@ -193,6 +234,13 @@ body {
   color: var(--text-light);
 }
 
+.status-icon-green { color: var(--green); }
+.status-icon-amber { color: var(--amber); }
+.status-icon-gray { color: var(--gray); }
+.status-icon-light { color: var(--text-light); }
+.status-icon-red { color: var(--red); }
+.status-icon-blue { color: var(--blue); }
+
 .risk-badge {
   font-size: 10px;
   padding: 1px 5px;
@@ -204,30 +252,43 @@ body {
 .risk-badge.stretch { background: var(--amber-bg); color: var(--amber); }
 
 .empty-state {
-  padding: 24px 16px;
+  padding: 32px var(--space-xl);
   text-align: center;
   color: var(--text-muted);
   line-height: 1.6;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
 }
+
+.empty-icon { color: var(--text-light); margin-bottom: 12px; opacity: 0.5; }
+.empty-title { font-size: 15px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; }
+.empty-body { font-size: 13px; color: var(--text-muted); max-width: 280px; }
 
 /* --- Detail Panel --- */
 
 .detail-empty {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   height: 100%;
   color: var(--text-light);
+  text-align: center;
 }
 
+.detail-panel { padding: var(--space-lg) var(--space-xl); }
+
 .detail-header {
-  margin-bottom: 20px;
+  margin-bottom: var(--space-md);
 }
 
 .detail-header h2 {
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 700;
-  margin-bottom: 4px;
+  margin-bottom: var(--space-xs);
 }
 
 .detail-header h3 {
@@ -243,7 +304,7 @@ body {
 }
 
 .detail-section {
-  margin-bottom: 18px;
+  margin-bottom: var(--space-md);
 }
 
 .detail-section h4 {
@@ -280,39 +341,97 @@ body {
 
 .narrative {
   font-size: 13px;
-  line-height: 1.5;
-  color: var(--text);
-  font-style: italic;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  background: var(--bg-subtle);
+  border-left: 3px solid var(--border);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: 0 var(--radius) var(--radius) 0;
 }
 
 /* --- Buttons --- */
 
 .btn {
-  padding: 6px 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
   font-size: 13px;
+  font-weight: 500;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--bg-panel);
   cursor: pointer;
   font-family: var(--font);
-  transition: background 0.1s;
+  transition: all 0.15s;
+  white-space: nowrap;
 }
 
-.btn:hover { background: var(--bg-hover); }
+.btn:hover { background: var(--bg-hover); border-color: var(--text-light); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .btn-sm { padding: 4px 10px; font-size: 12px; }
-.btn-icon { border: none; background: none; font-size: 18px; cursor: pointer; padding: 4px 6px; }
+.btn-icon-only { border: none; background: none; cursor: pointer; padding: 6px; border-radius: var(--radius); color: var(--text-muted); display: inline-flex; align-items: center; }
+.btn-icon-only:hover { background: var(--bg-hover); color: var(--text); }
+.btn-ghost { border-color: transparent; background: transparent; color: var(--text-muted); }
+.btn-ghost:hover { background: var(--bg-hover); color: var(--text); border-color: transparent; }
 .btn-primary { background: var(--text); color: white; border-color: var(--text); }
-.btn-primary:hover { background: #292524; }
-.btn-success { background: var(--green-bg); color: var(--green); border-color: var(--green); }
-.btn-success:hover { background: #bbf7d0; }
-.btn-danger { background: var(--red-bg); color: var(--red); border-color: var(--red); }
-.btn-danger:hover { background: #fecaca; }
-.btn-muted { background: var(--gray-bg); color: var(--gray); border-color: var(--gray); }
+.btn-primary:hover { background: #292524; border-color: #292524; }
+
+/* Decision action buttons */
+.btn-pursue { background: var(--green-bg); color: var(--green); border-color: var(--green-border); }
+.btn-pursue:hover { background: var(--green-border); }
+.btn-pass { background: var(--red-bg); color: var(--red); border-color: var(--red-border); }
+.btn-pass:hover { background: var(--red-border); }
+.btn-save { background: var(--blue-bg); color: var(--blue); border-color: var(--blue-border); }
+.btn-save:hover { background: var(--blue-border); }
 
 .action-buttons {
   display: flex;
   gap: 8px;
 }
+
+/* --- Pipeline (post-decision status tracking) --- */
+
+.action-pipeline {
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px;
+}
+
+.pipeline-status {
+  margin-bottom: 10px;
+  font-size: 13px;
+}
+
+.pipeline-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.pipeline-notes textarea {
+  font-family: var(--font);
+  font-size: 13px;
+}
+
+/* Status badges (pipeline) */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.status-green { background: var(--green-bg); color: var(--green); }
+.status-amber { background: var(--amber-bg); color: var(--amber); }
+.status-red { background: var(--red-bg); color: var(--red); }
+.status-blue { background: var(--blue-bg); color: var(--blue); }
+.status-gray { background: var(--gray-bg); color: var(--gray); }
 
 /* --- Modals --- */
 
@@ -333,7 +452,7 @@ body {
   width: 520px;
   max-height: 80vh;
   overflow-y: auto;
-  padding: 20px;
+  padding: var(--space-lg) var(--space-xl);
 }
 
 .modal-wide { width: 680px; }
@@ -514,9 +633,59 @@ textarea:focus { outline: 2px solid var(--text); outline-offset: -1px; }
   gap: 8px;
 }
 
-/* --- Responsive --- */
+/* --- Utility --- */
 
-@media (max-width: 768px) {
-  .split-view { flex-direction: column; }
-  .job-list-panel { width: 100%; height: 40vh; border-right: none; border-bottom: 1px solid var(--border); }
+.hidden { display: none !important; }
+
+/* --- Nudge Bar --- */
+
+.nudge-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: var(--space-md) var(--space-xl);
+  background: #1c1917;
+  color: #fafaf9;
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: center;
+  z-index: 300;
+  animation: slideUp 0.3s ease;
+}
+
+.nudge-bar .nudge-remaining {
+  opacity: 0.5;
+  margin-left: var(--space-sm);
+}
+
+.nudge-bar .nudge-close {
+  background: none;
+  border: none;
+  color: #a8a29e;
+  cursor: pointer;
+  margin-left: var(--space-md);
+  font-size: 16px;
+}
+
+/* --- Responsive (desktop sizes — not mobile, Puppeteer requires desktop) --- */
+
+/* Small desktop: 13" laptop */
+@media (max-width: 1366px) {
+  .job-list-panel { width: 280px; min-width: 240px; }
+  .detail-panel { padding: var(--space-md) var(--space-lg); }
+  .tagline { display: none; }
+  .detail-header h2 { font-size: 16px; }
+}
+
+/* Large desktop: 24" monitor */
+@media (min-width: 1728px) {
+  .job-list-panel { width: 360px; }
+  .detail-content { max-width: 840px; }
+}
+
+/* Ultrawide: 2560px+ */
+@media (min-width: 2400px) {
+  .job-list-panel { width: 400px; }
+  .detail-content { max-width: 900px; margin: 0 auto; }
 }
