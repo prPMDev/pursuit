@@ -4,6 +4,19 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pursuit — Job Search Dashboard</title>
+  <!-- Vendor: Pico CSS (classless base styling for forms) -->
+  <link rel="stylesheet" href="/vendor/pico/pico.min.css">
+  <!-- Vendor: Shoelace web components -->
+  <link rel="stylesheet" href="/vendor/shoelace/themes/light.css">
+  <script type="module">
+    import { setBasePath } from '/vendor/shoelace/utilities/base-path.js';
+    setBasePath('/vendor/shoelace');
+  </script>
+  <script type="module" src="/vendor/shoelace/shoelace-autoloader.js"></script>
+  <!-- Vendor: Tabulator (job list table) -->
+  <link rel="stylesheet" href="/vendor/tabulator/tabulator.min.css">
+  <script src="/vendor/tabulator/tabulator.min.js"></script>
+  <!-- App styles (overrides vendor defaults) -->
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>

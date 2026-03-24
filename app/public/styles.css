@@ -50,6 +50,56 @@
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
+/* --- Pico CSS overrides ---
+   Pico adds margins/padding to native elements globally.
+   We neutralize its aggressive defaults outside the setup overlay,
+   while keeping Pico active inside .setup-overlay for nice form styling. */
+
+:where(body) { padding: 0; }
+:where(h1, h2, h3, h4, h5, h6) { margin-bottom: 0; --pico-font-weight: 600; }
+:where(p) { margin-bottom: 0; }
+:where(article, section, aside, header, footer, main) { padding: 0; margin: 0; }
+:where(a) { --pico-color: var(--blue); }
+
+/* --- Shoelace custom properties — match warm stone palette --- */
+:root {
+  --sl-color-primary-50: #fafaf9;
+  --sl-color-primary-100: #f5f5f4;
+  --sl-color-primary-200: #e7e5e4;
+  --sl-color-primary-300: #d6d3d1;
+  --sl-color-primary-400: #a8a29e;
+  --sl-color-primary-500: #78716c;
+  --sl-color-primary-600: #57534e;
+  --sl-color-primary-700: #44403c;
+  --sl-color-primary-800: #292524;
+  --sl-color-primary-900: #1c1917;
+  --sl-color-primary-950: #0c0a09;
+
+  --sl-color-success-600: #16a34a;
+  --sl-color-warning-600: #d97706;
+  --sl-color-danger-600: #dc2626;
+
+  --sl-font-sans: var(--font);
+  --sl-font-mono: var(--font-mono);
+  --sl-font-size-medium: 14px;
+  --sl-input-border-radius-medium: var(--radius);
+}
+
+/* --- Tabulator theme overrides — match warm stone palette --- */
+.tabulator {
+  --tabulator-border-color: var(--border);
+  --tabulator-header-background-color: var(--bg-panel);
+  --tabulator-header-text-color: var(--text-secondary);
+  --tabulator-row-background-color: var(--bg-panel);
+  --tabulator-row-alt-background-color: var(--bg-subtle);
+  --tabulator-row-hover-background: var(--bg-hover);
+  --tabulator-row-selected-background: var(--bg-active);
+  font-family: var(--font);
+  font-size: 13px;
+  border: none;
+  background: transparent;
+}
+
 body {
   font-family: var(--font);
   font-size: 14px;
