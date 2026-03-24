@@ -9,6 +9,13 @@ import { renderAddJobsModal, initAddJobs } from './add-jobs.js';
 import { icon } from './icons.js';
 import { html } from './util.js';
 
+// --- Health state (checked once at startup, modules read this) ---
+
+export const health = {
+  apiKeyConfigured: false,
+  chromeFound: false,
+};
+
 // --- Icon Injection ---
 
 export function injectIcons(root = document) {
@@ -114,19 +121,28 @@ async function init() {
 
   // Phase 2: Check health
   try {
-    const health = await api('/health');
+    const result = await api('/health');
+    health.apiKeyConfigured = result.apiKeyConfigured;
+    health.chromeFound = result.chromeFound;
+
     const fetchBtn = document.getElementById('btn-fetch-now');
+    const scanBtn = document.getElementById('btn-scan');
     const statusEl = document.getElementById('fetch-status');
+
+    function disableBtn(btn, title) {
+      if (!btn) return;
+      btn.disabled = true;
+      btn.style.opacity = '0.5';
+      btn.title = title;
+    }
 
     if (!health.apiKeyConfigured) {
       statusEl.textContent = '\u26A0 No API key — add to app/.env';
+      disableBtn(fetchBtn, 'API key required. Add ANTHROPIC_API_KEY to app/.env');
+      disableBtn(scanBtn, 'API key required. Add ANTHROPIC_API_KEY to app/.env');
     } else if (!health.chromeFound) {
       statusEl.textContent = '\u26A0 No Chrome found';
-      if (fetchBtn) {
-        fetchBtn.disabled = true;
-        fetchBtn.style.opacity = '0.5';
-        fetchBtn.title = 'Chrome/Chromium not installed. Install it or set CHROME_PATH in .env. Add Jobs still works.';
-      }
+      disableBtn(fetchBtn, 'Chrome/Chromium not installed. Install it or set CHROME_PATH in .env. Add Jobs still works.');
     }
   } catch (err) {
     console.error('Health check failed:', err);

@@ -1,5 +1,5 @@
 // Pursuit Dashboard — Job Detail (right panel)
-import { api, showLoading, hideLoading, injectIcons } from './app.js';
+import { api, showLoading, hideLoading, injectIcons, health } from './app.js';
 import { icon, statusBadge } from './icons.js';
 import { refreshJobList } from './job-list.js';
 import { escapeHtml } from './util.js';
@@ -170,6 +170,10 @@ function renderEvaluator() {
         </div>
         ${reasoning ? `<p class="narrative">${escapeHtml(reasoning)}</p>` : ''}
       </div>
+    `;
+  } else if (!health.apiKeyConfigured) {
+    container.innerHTML = `
+      <span style="font-size: 12px; color: var(--text-muted);">Evaluator requires API key — add ANTHROPIC_API_KEY to app/.env</span>
     `;
   } else {
     container.innerHTML = `

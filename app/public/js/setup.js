@@ -1,5 +1,5 @@
 // Pursuit Dashboard — First-Time Setup Flow
-import { api, showLoading, hideLoading } from './app.js';
+import { api, showLoading, hideLoading, health } from './app.js';
 import { escapeHtml, html } from './util.js';
 
 const conversationHistory = {};
@@ -82,6 +82,7 @@ export function renderSetupOverlay() {
 }
 
 export async function checkSetupNeeded() {
+  if (!health.apiKeyConfigured) return false; // Setup needs Claude — skip without key
   try {
     const status = await api('/setup/status');
     return !status.setupComplete;

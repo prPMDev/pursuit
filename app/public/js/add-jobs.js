@@ -1,5 +1,5 @@
 // Pursuit Dashboard — Add Jobs modal
-import { api, showLoading, hideLoading } from './app.js';
+import { api, showLoading, hideLoading, health } from './app.js';
 import { showModal, hideModal } from './modal.js';
 import { refreshJobList } from './job-list.js';
 import { html, escapeHtml } from './util.js';
@@ -38,11 +38,14 @@ export function renderAddJobsModal() {
 export function initAddJobs() {
   document.getElementById('btn-add-jobs').addEventListener('click', () => {
     showModal('modal-add-jobs');
+    // Update button label based on API key status
+    const submitBtn = document.getElementById('btn-submit-listings');
+    submitBtn.textContent = health.apiKeyConfigured ? 'Add & Scan' : 'Save Jobs';
     document.getElementById('input-listings').focus();
   });
 
   // Scan button also opens add jobs modal
-  document.getElementById('btn-scan').addEventListener('click', () => {
+  document.getElementById('btn-scan')?.addEventListener('click', () => {
     showModal('modal-add-jobs');
     document.getElementById('input-listings').focus();
   });
@@ -52,6 +55,22 @@ export function initAddJobs() {
     if (!listings) return;
 
     hideModal('modal-add-jobs');
+
+    if (!health.apiKeyConfigured) {
+      // No API key — save listings without scanning
+      try {
+        await api('/jobs/manual', {
+          method: 'POST',
+          body: { listings },
+        });
+        document.getElementById('input-listings').value = '';
+        alert('Jobs saved. Add an API key to app/.env to scan and evaluate them.');
+      } catch (err) {
+        alert(`Save failed: ${err.message}`);
+      }
+      return;
+    }
+
     showLoading('Scanning listings against your profile...');
 
     try {
