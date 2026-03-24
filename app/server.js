@@ -412,12 +412,71 @@ app.post('/api/jobs/manual', async (req, res) => {
 });
 
 // Fetch — trigger Puppeteer to browse job boards
+// Max 3 fetches per day. Jobs are posted when they're posted.
 let fetchInProgress = false;
+const MAX_DAILY_FETCHES = 3;
+
+const fetchNudges = [
+  // After fetch 1 — encouraging
+  "Fresh batch in. Now pick the 2-3 worth your time and go deep on those.",
+  // After fetch 2 — gentle reminder
+  "Second scan today. Remember: the best opportunities reward depth, not refresh rate.",
+  // After fetch 3 — the limit, with warmth
+  "Last scan for today. You've seen what's out there — now go pursue something. The board isn't going anywhere overnight.",
+];
+
+const fetchLimitMessages = [
+  "You've already scanned 3 times today. Jobs are posted when they're posted — refreshing won't make new ones appear. Go work on an application instead.",
+  "Three's the limit. LinkedIn isn't a slot machine. Go write that outreach message you've been putting off.",
+  "Nope, 3 scans is plenty. Your energy is better spent on one great application than another round of browsing.",
+  "The job board will survive without you for a few hours. Go do something that moves a real opportunity forward.",
+];
+
+function getTodaysFetchCount() {
+  const today = datePrefix();
+  const fetches = settings.fetchHistory || [];
+  return fetches.filter(f => f.startsWith(today)).length;
+}
+
+function recordFetch() {
+  if (!settings.fetchHistory) settings.fetchHistory = [];
+  settings.fetchHistory.push(new Date().toISOString());
+  // Keep only last 7 days of history
+  const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  settings.fetchHistory = settings.fetchHistory.filter(f => new Date(f).getTime() > weekAgo);
+}
+
+function checkFetchLimit(res) {
+  const count = getTodaysFetchCount();
+  if (count >= MAX_DAILY_FETCHES) {
+    const msg = fetchLimitMessages[Math.floor(Math.random() * fetchLimitMessages.length)];
+    return res.status(429).json({
+      error: msg,
+      fetchesToday: count,
+      limit: MAX_DAILY_FETCHES,
+      nudge: true,
+    });
+  }
+  return null; // OK to proceed
+}
+
+app.get('/api/fetch/status', (req, res) => {
+  const count = getTodaysFetchCount();
+  res.json({
+    fetchesToday: count,
+    remaining: Math.max(0, MAX_DAILY_FETCHES - count),
+    limit: MAX_DAILY_FETCHES,
+    inProgress: fetchInProgress,
+  });
+});
 
 app.post('/api/fetch', async (req, res) => {
   if (fetchInProgress) {
     return res.status(409).json({ error: 'Fetch already in progress' });
   }
+
+  const limitResponse = checkFetchLimit(res);
+  if (limitResponse) return limitResponse;
 
   const searchQueries = settings.searchQueries || [];
   if (searchQueries.length === 0) {
@@ -427,6 +486,8 @@ app.post('/api/fetch', async (req, res) => {
   }
 
   fetchInProgress = true;
+  const fetchNumber = getTodaysFetchCount(); // 0-indexed before recording
+  recordFetch();
   settings.lastFetchTime = new Date().toISOString();
   await saveSettings();
 
@@ -443,6 +504,9 @@ app.post('/api/fetch', async (req, res) => {
       ok: true,
       totalFetched: result.totalFetched,
       files: result.files,
+      fetchesToday: fetchNumber + 1,
+      remaining: MAX_DAILY_FETCHES - fetchNumber - 1,
+      nudge: fetchNudges[fetchNumber] || fetchNudges[fetchNudges.length - 1],
     });
   } catch (err) {
     fetchInProgress = false;
@@ -456,6 +520,9 @@ app.post('/api/fetch-and-scan', async (req, res) => {
     return res.status(409).json({ error: 'Fetch already in progress' });
   }
 
+  const limitResponse = checkFetchLimit(res);
+  if (limitResponse) return limitResponse;
+
   const searchQueries = settings.searchQueries || [];
   if (searchQueries.length === 0) {
     return res.status(400).json({
@@ -464,6 +531,8 @@ app.post('/api/fetch-and-scan', async (req, res) => {
   }
 
   fetchInProgress = true;
+  const fetchNumber = getTodaysFetchCount();
+  recordFetch();
   settings.lastFetchTime = new Date().toISOString();
   await saveSettings();
 
@@ -507,10 +576,14 @@ app.post('/api/fetch-and-scan', async (req, res) => {
     await writeFile(join(DATA, 'scans', scanFilename), scanResult);
 
     const parsed = parseScannerOutput(scanResult);
+    fetchInProgress = false;
     res.json({
       ok: true,
       totalFetched: result.totalFetched,
       scanFile: scanFilename,
+      fetchesToday: fetchNumber + 1,
+      remaining: MAX_DAILY_FETCHES - fetchNumber - 1,
+      nudge: fetchNudges[fetchNumber] || fetchNudges[fetchNudges.length - 1],
       ...parsed,
     });
   } catch (err) {

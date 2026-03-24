@@ -36,6 +36,15 @@ export function initSettings() {
 
   // Fetch Now button (in top bar)
   document.getElementById('btn-fetch-now')?.addEventListener('click', async () => {
+    // Check remaining fetches first
+    try {
+      const status = await api('/fetch/status');
+      if (status.remaining <= 0) {
+        // Don't even try — show the limit message from server
+      }
+      updateFetchCounter(status.remaining);
+    } catch { /* proceed anyway */ }
+
     showLoading('Browsing job boards...');
     try {
       const result = await api('/fetch-and-scan', { method: 'POST' });
@@ -47,10 +56,21 @@ export function initSettings() {
         updateFetchStatus(`Found ${result.totalFetched} new jobs`);
         await refreshJobList();
       }
+
+      // Show the nudge
+      if (result.nudge) {
+        showNudge(result.nudge, result.remaining);
+      }
+
+      updateFetchCounter(result.remaining);
     } catch (err) {
       hideLoading();
       if (err.message.includes('No search queries')) {
         alert('No search queries configured. Open Settings to add them.');
+      } else if (err.message.includes('nudge') || err.message.includes('scanned 3') || err.message.includes('Three') || err.message.includes('Nope') || err.message.includes('slot machine') || err.message.includes('refresh')) {
+        // This is a rate limit nudge — show it nicely, not as an error
+        showNudge(err.message, 0);
+        updateFetchCounter(0);
       } else {
         alert(`Fetch failed: ${err.message}`);
       }
@@ -118,12 +138,61 @@ async function loadFetchStatus() {
     if (settings.lastFetchTime) {
       updateFetchStatus(`Last fetched: ${timeAgo(settings.lastFetchTime)}`);
     }
+    // Set fetch counter
+    const status = await api('/fetch/status');
+    updateFetchCounter(status.remaining);
   } catch { /* ignore */ }
 }
 
 function updateFetchStatus(text) {
   const el = document.getElementById('fetch-status');
   if (el) el.textContent = text;
+}
+
+function showNudge(message, remaining) {
+  // Remove existing nudge if any
+  document.getElementById('nudge-bar')?.remove();
+
+  const bar = document.createElement('div');
+  bar.id = 'nudge-bar';
+  bar.style.cssText = `
+    position: fixed; bottom: 0; left: 0; right: 0;
+    padding: 12px 20px; background: #1c1917; color: #fafaf9;
+    font-size: 13px; line-height: 1.5; text-align: center;
+    z-index: 300; animation: slideUp 0.3s ease;
+  `;
+
+  const remainingText = remaining !== undefined
+    ? ` <span style="opacity: 0.5; margin-left: 8px;">${remaining} scan${remaining !== 1 ? 's' : ''} remaining today</span>`
+    : '';
+
+  bar.innerHTML = `
+    ${message}${remainingText}
+    <button onclick="this.parentElement.remove()" style="
+      background: none; border: none; color: #a8a29e; cursor: pointer;
+      margin-left: 12px; font-size: 16px;
+    ">&times;</button>
+  `;
+
+  document.body.appendChild(bar);
+
+  // Auto-dismiss after 8 seconds
+  setTimeout(() => bar.remove(), 8000);
+}
+
+function updateFetchCounter(remaining) {
+  const btn = document.getElementById('btn-fetch-now');
+  if (!btn) return;
+
+  if (remaining <= 0) {
+    btn.textContent = 'Done for today';
+    btn.disabled = true;
+    btn.style.opacity = '0.5';
+  } else {
+    btn.textContent = `Fetch Jobs (${remaining} left)`;
+    btn.disabled = false;
+    btn.style.opacity = '1';
+  }
 }
 
 function timeAgo(isoString) {
