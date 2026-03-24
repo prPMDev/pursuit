@@ -36,8 +36,10 @@ If you're trying to "spray and pray" 500 applications, this isn't for you. If yo
 
 Pursuit is designed to handle the full job search lifecycle:
 
-### 1. **Scanner** (Future)
-Automatically find jobs that match your criteria. No more manual LinkedIn scrolling.
+### 1. **Scanner** (Current - Working)
+Personalized job shortlisting. Create your professional profile, paste a batch of listings, get back only the ones worth your time. Not keyword matching — identity matching.
+
+**Status:** ✅ Profile + prompt + formatter script. See [`scanner/`](scanner/).
 
 ### 2. **Evaluator** (Current - Working)
 Instant fit analysis. Paste a JD, get:
@@ -63,9 +65,9 @@ Job opportunity tracking and follow-through system. Never lose track of what you
 
 ## Current State
 
-**Working:** Job Evaluator (see [`evaluator/`](evaluator/))
+**Working:** Scanner (see [`scanner/`](scanner/)) + Job Evaluator (see [`evaluator/`](evaluator/))
 
-**Planned:** Scanner, Strategist, Tracking system
+**Planned:** Strategist, Tracking system
 
 This is a public work-in-progress. The evaluator works today. The rest will unfold over time.
 

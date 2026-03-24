@@ -1,0 +1,30 @@
+# Pursuit Scanner — Configuration
+# Copy to config.yaml and customize. Do NOT commit config.yaml (it's in .gitignore).
+
+# Formatter settings
+formatter:
+  max_per_batch: 20    # Cap batch size (quality > volume)
+
+# --- Future: RSS feed monitoring (rss_monitor.py) ---
+# feeds:
+#   - name: "Indeed - Senior PM Remote"
+#     url: "https://www.indeed.com/rss?q=senior+product+manager&l=remote"
+#   - name: "Indeed - Staff PM NYC"
+#     url: "https://www.indeed.com/rss?q=staff+product+manager&l=new+york"
+#
+# Pre-filters applied before Claude sees listings
+# filters:
+#   exclude_titles:
+#     - "intern"
+#     - "junior"
+#     - "entry level"
+#   require_keywords: []  # At least one must appear in title/description
+
+# --- Future: Email parsing (email_parser.py) ---
+# email:
+#   imap_server: "imap.gmail.com"
+#   # Credentials via env vars: PURSUIT_EMAIL, PURSUIT_EMAIL_PASSWORD
+#   folder: "Job Alerts"
+#   sender_filters:
+#     - "jobalerts@indeed.com"
+#     - "jobs-noreply@linkedin.com"

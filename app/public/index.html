@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pursuit — Job Search Dashboard</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <!-- Top Bar -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <h1 class="logo">Pursuit</h1>
+      <span class="tagline">Quality over volume</span>
+    </div>
+    <div class="topbar-actions">
+      <span class="fetch-status" id="fetch-status"></span>
+      <button class="btn btn-sm" id="btn-add-jobs" title="Paste job listings">+ Add Jobs</button>
+      <button class="btn btn-sm btn-primary" id="btn-scan" title="Scan unscanned jobs">Scan</button>
+      <button class="btn btn-icon" id="btn-profile" title="Profile">&#x1f464;</button>
+      <button class="btn btn-icon" id="btn-settings" title="Settings">&#x2699;</button>
+    </div>
+  </header>
+
+  <!-- Profile Summary Strip -->
+  <div class="profile-strip" id="profile-strip">
+    <span class="profile-strip-text" id="profile-strip-text">No profile set — click Profile to get started</span>
+  </div>
+
+  <!-- Main Split View -->
+  <main class="split-view">
+    <!-- Left Panel: Job List -->
+    <aside class="job-list-panel" id="job-list-panel">
+      <div class="filter-bar">
+        <button class="filter-btn active" data-filter="all">All</button>
+        <button class="filter-btn" data-filter="EVALUATE">Evaluate</button>
+        <button class="filter-btn" data-filter="MAYBE">Maybe</button>
+        <button class="filter-btn" data-filter="SKIP">Skipped</button>
+      </div>
+      <div class="job-list" id="job-list">
+        <div class="empty-state" id="empty-state">
+          <p>No jobs yet.</p>
+          <p>Click <strong>+ Add Jobs</strong> to paste listings, then <strong>Scan</strong> to filter them.</p>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Right Panel: Job Detail -->
+    <section class="detail-panel" id="detail-panel">
+      <div class="detail-empty" id="detail-empty">
+        <p>Select a job from the list to see details.</p>
+      </div>
+      <div class="detail-content" id="detail-content" style="display:none;">
+        <div class="detail-header">
+          <h2 id="detail-company"></h2>
+          <h3 id="detail-role"></h3>
+          <div class="detail-meta" id="detail-meta"></div>
+        </div>
+
+        <div class="detail-section">
+          <h4>Scanner Rationale</h4>
+          <div class="tags" id="detail-tags"></div>
+          <p class="narrative" id="detail-narrative"></p>
+        </div>
+
+        <div class="detail-section" id="detail-risk-section">
+          <h4>Risk</h4>
+          <p id="detail-risk"></p>
+        </div>
+
+        <div class="detail-section" id="detail-watch-section">
+          <h4>Watch For</h4>
+          <p id="detail-watch"></p>
+        </div>
+
+        <div class="detail-section">
+          <h4>Evaluator</h4>
+          <div id="detail-evaluator">
+            <button class="btn btn-sm" id="btn-evaluate">Run Evaluator</button>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <h4>Actions</h4>
+          <div class="action-buttons">
+            <button class="btn btn-success" id="btn-pursue">Pursue</button>
+            <button class="btn btn-danger" id="btn-pass">Pass</button>
+            <button class="btn btn-muted" id="btn-save-later">Save for Later</button>
+          </div>
+        </div>
+
+        <div class="detail-section" id="detail-signal-section">
+          <h4>Key Signal</h4>
+          <p id="detail-signal"></p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Add Jobs Modal -->
+  <div class="modal" id="modal-add-jobs" style="display:none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Add Job Listings</h3>
+        <button class="btn btn-icon modal-close" data-modal="modal-add-jobs">&times;</button>
+      </div>
+      <p class="modal-hint">Paste job listings from LinkedIn, Indeed, or any source. One per block, separated by blank lines or ---.</p>
+      <textarea id="input-listings" rows="12" placeholder="Senior PM at TechCorp, Remote&#10;Own integrations roadmap, 5+ years experience&#10;https://linkedin.com/jobs/view/123&#10;&#10;---&#10;&#10;Staff PM - Platform at HealthCo&#10;NYC Hybrid, Series B&#10;https://indeed.com/viewjob?id=456"></textarea>
+      <div class="modal-actions">
+        <button class="btn" data-modal="modal-add-jobs">Cancel</button>
+        <button class="btn btn-primary" id="btn-submit-listings">Add &amp; Scan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Profile Modal -->
+  <div class="modal" id="modal-profile" style="display:none;">
+    <div class="modal-content modal-wide">
+      <div class="modal-header">
+        <h3>Professional Profile</h3>
+        <button class="btn btn-icon modal-close" data-modal="modal-profile">&times;</button>
+      </div>
+      <p class="modal-hint">Your professional identity. Be specific, be honest. The Scanner works better when you are.</p>
+      <textarea id="input-profile" rows="20" placeholder="Loading profile..."></textarea>
+      <div class="modal-actions">
+        <button class="btn" data-modal="modal-profile">Cancel</button>
+        <button class="btn btn-primary" id="btn-save-profile">Save Profile</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div class="modal" id="modal-settings" style="display:none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Settings</h3>
+        <button class="btn btn-icon modal-close" data-modal="modal-settings">&times;</button>
+      </div>
+      <div class="settings-section">
+        <h4>API Key</h4>
+        <div id="api-key-status"></div>
+      </div>
+      <div class="settings-section">
+        <h4>Prompts in Use</h4>
+        <div id="prompts-info"></div>
+      </div>
+      <div class="settings-section">
+        <h4>Data</h4>
+        <p><a href="#" id="btn-view-decisions">View Decision Log</a></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading Overlay -->
+  <div class="loading-overlay" id="loading" style="display:none;">
+    <div class="loading-content">
+      <div class="spinner"></div>
+      <p id="loading-text">Scanning...</p>
+      <p class="loading-hint">Quality gate, not collector.</p>
+    </div>
+  </div>
+
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>

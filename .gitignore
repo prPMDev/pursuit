@@ -1,14 +1,28 @@
 # Personal customizations
 prompt-custom.md
 my-background.md
+my-profile.md
+scanner/my-profile.md
+config.yaml
+scanner/scripts/config.yaml
 CLAUDE.md
 claude.md
 .claude/
 
 # API keys and credentials
 .env
+app/.env
 *.key
 *.pem
+
+# User data (markdown data layer)
+data/profile.md
+data/jobs/
+data/scans/
+data/evaluations/
+data/decisions.md
+data/patterns.md
+data/settings.json
 
 # OS files
 .DS_Store
