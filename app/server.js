@@ -99,6 +99,35 @@ async function saveSettings() {
   await writeFile(join(DATA, 'settings.json'), JSON.stringify(settings, null, 2));
 }
 
+// --- Parse raw fetched job listings ---
+
+function parseRawJobListings(markdown) {
+  const jobs = [];
+  // Split on job blocks (--- separated)
+  const blocks = markdown.split(/^---$/m).filter(b => b.trim());
+
+  for (const block of blocks) {
+    const get = (field) => {
+      const m = block.match(new RegExp(`^${field}:\\s*(.+)$`, 'mi'));
+      return m ? m[1].trim() : '';
+    };
+    const title = get('Title');
+    const company = get('Company');
+    if (!title || !company) continue;
+
+    jobs.push({
+      title,
+      company,
+      location: get('Location'),
+      posted: get('Posted'),
+      source: get('Source'),
+      summary: get('Summary'),
+      link: get('Link'),
+    });
+  }
+  return jobs;
+}
+
 // --- Parse scanner output into structured jobs ---
 
 function parseScannerOutput(markdown) {
@@ -213,41 +242,57 @@ app.put('/api/profile', async (req, res) => {
   res.json({ ok: true });
 });
 
-// Jobs — list all jobs from scans
+// Jobs — list all jobs from scans, enriched with raw fetched metadata
 app.get('/api/jobs', async (req, res) => {
   try {
+    // Load raw fetched job metadata for enrichment (location, link, summary)
+    const jobDir = join(DATA, 'jobs');
+    const jobFiles = await readdir(jobDir).catch(() => []);
+    const rawJobIndex = {};
+    for (const file of jobFiles.filter(f => f.endsWith('.md'))) {
+      const content = await readFile(join(jobDir, file), 'utf-8');
+      for (const raw of parseRawJobListings(content)) {
+        const key = jobId(raw.company, raw.title);
+        rawJobIndex[key] = raw;
+      }
+    }
+
     const scanDir = join(DATA, 'scans');
     const files = await readdir(scanDir).catch(() => []);
     const allJobs = [];
+    const evalFiles = await readdir(join(DATA, 'evaluations')).catch(() => []);
+    const profile = await readMarkdown(join(DATA, 'profile.md')) || '';
 
     for (const file of files.filter(f => f.endsWith('.md'))) {
       const content = await readFile(join(scanDir, file), 'utf-8');
       const parsed = parseScannerOutput(content);
-      const profile = await readMarkdown(join(DATA, 'profile.md')) || '';
 
       for (const job of parsed.jobs) {
         job.id = jobId(job.company, job.role);
         job.scanFile = file;
         job.tags = extractTags(job, profile);
-        job.source = file.includes('indeed') ? 'Indeed' : file.includes('linkedin') ? 'LinkedIn' : 'Manual';
-        job.date = file.substring(0, 10); // YYYY-MM-DD prefix
+        job.date = file.substring(0, 10);
+
+        // Enrich with raw fetched metadata
+        const raw = rawJobIndex[job.id];
+        if (raw) {
+          job.location = raw.location || '';
+          job.link = raw.link || '';
+          job.summary = raw.summary || '';
+          job.source = raw.source || '';
+          job.posted = raw.posted || '';
+        }
+        if (!job.source) {
+          job.source = file.includes('indeed') ? 'Indeed' : file.includes('linkedin') ? 'LinkedIn' : 'Manual';
+        }
 
         // Check if evaluation exists
-        const evalFiles = await readdir(join(DATA, 'evaluations')).catch(() => []);
         const evalFile = evalFiles.find(f => f.includes(job.id));
         job.hasEvaluation = !!evalFile;
         job.evalFile = evalFile || null;
 
         allJobs.push(job);
       }
-    }
-
-    // Also include manually added jobs that haven't been scanned
-    const jobDir = join(DATA, 'jobs');
-    const jobFiles = await readdir(jobDir).catch(() => []);
-    // Mark unscanned jobs
-    for (const file of jobFiles.filter(f => f.endsWith('.md'))) {
-      // These are raw fetched listings — they'll get scanned on next scan run
     }
 
     res.json({ jobs: allJobs });
@@ -272,6 +317,21 @@ app.get('/api/jobs/:id', async (req, res) => {
       if (job) {
         job.id = id;
         job.tags = extractTags(job, '');
+
+        // Enrich with raw fetched metadata
+        const jobDir = join(DATA, 'jobs');
+        const jobFiles = await readdir(jobDir).catch(() => []);
+        for (const jf of jobFiles.filter(f => f.endsWith('.md'))) {
+          const rawContent = await readFile(join(jobDir, jf), 'utf-8');
+          const raw = parseRawJobListings(rawContent).find(r => jobId(r.company, r.title) === id);
+          if (raw) {
+            job.location = raw.location || '';
+            job.link = raw.link || '';
+            job.summary = raw.summary || '';
+            job.source = raw.source || '';
+            break;
+          }
+        }
 
         // Load evaluation if exists
         const evalDir = join(DATA, 'evaluations');
