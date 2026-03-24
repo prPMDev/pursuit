@@ -160,6 +160,8 @@ async function init() {
   // Phase 4: Check if first-time setup is needed
   const needsSetup = await checkSetupNeeded();
   if (needsSetup) {
+    // Hide dashboard — overlay takes full screen
+    document.querySelector('main').classList.add('hidden');
     showSetup();
   } else {
     updateProfileStrip();

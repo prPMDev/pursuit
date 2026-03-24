@@ -515,14 +515,24 @@ app.get('/api/setup/status', async (req, res) => {
   const hasReferences = refs.filter(f => f.endsWith('.md')).length >= 2;
   const hasPreferences = !!prefs;
 
+  // Setup is complete if either: (a) old flow: profile + references, or (b) new flow: explicit flag
+  const setupComplete = settings.setupComplete || (hasProfile && hasReferences);
+
   res.json({
-    setupComplete: hasProfile && hasReferences,
+    setupComplete,
     hasProfile,
     hasReferences,
     referenceCount: refs.filter(f => f.endsWith('.md')).length,
     hasPreferences,
-    steps: SETUP_STEPS.map(s => ({ id: s.id, action: s.action })),
+    steps: SETUP_STEPS ? SETUP_STEPS.map(s => ({ id: s.id, action: s.action })) : [],
   });
+});
+
+// Mark setup as complete (new static form flow)
+app.post('/api/setup/mark-complete', async (req, res) => {
+  settings.setupComplete = true;
+  await saveSettings();
+  res.json({ ok: true });
 });
 
 // Chat endpoint for setup conversation
