@@ -100,6 +100,50 @@
   background: transparent;
 }
 
+.tabulator .tabulator-header { border-bottom: 1px solid var(--border); }
+.tabulator .tabulator-header .tabulator-col { background: var(--bg-panel); border-right: none; }
+.tabulator .tabulator-header .tabulator-col-content { padding: 8px 10px; }
+.tabulator .tabulator-header .tabulator-col-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); }
+
+.tabulator .tabulator-tableholder { overflow-y: auto; }
+.tabulator .tabulator-row { border-bottom: 1px solid var(--border-light); cursor: pointer; min-height: 42px; }
+.tabulator .tabulator-row:hover { background: var(--bg-hover); }
+.tabulator .tabulator-row.tabulator-selected { background: var(--bg-active); }
+.tabulator .tabulator-cell { padding: 8px 10px; border-right: none; }
+
+.tabulator .cell-company { font-weight: 500; color: var(--text); }
+.tabulator .cell-role { color: var(--text); }
+.tabulator .cell-muted { color: var(--text-muted); font-size: 12px; }
+
+.tabulator .tabulator-placeholder [class*="empty"] { padding: 48px 24px; text-align: center; }
+
+/* Status badges in Tabulator cells */
+.status-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.status-badge.evaluate { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
+.status-badge.maybe { background: var(--amber-bg); color: var(--amber); border: 1px solid var(--amber-border); }
+.status-badge.skip { background: var(--gray-bg); color: var(--gray); border: 1px solid var(--gray-border); }
+.status-badge.unscanned { background: var(--gray-bg); color: var(--text-light); border: 1px solid var(--gray-border); }
+
+.risk-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 500;
+}
+.risk-badge.safe { background: var(--green-bg); color: var(--green); }
+.risk-badge.stretch { background: var(--amber-bg); color: var(--amber); }
+
+#job-list-table { flex: 1; overflow: hidden; }
+
 body {
   font-family: var(--font);
   font-size: 14px;
@@ -181,25 +225,46 @@ body {
 
 /* --- Split View --- */
 
-.split-view {
+/* --- Dashboard Layout (push split) --- */
+.dashboard {
   display: flex;
   flex: 1;
   overflow: hidden;
 }
 
 .job-list-panel {
-  width: 340px;
-  min-width: 280px;
-  border-right: 1px solid var(--border);
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   background: var(--bg-panel);
+  transition: flex 0.2s ease;
+}
+
+/* When detail is open, list compresses */
+.dashboard.detail-open .job-list-panel {
+  flex: 0 0 40%;
+  min-width: 320px;
+  border-right: 1px solid var(--border);
 }
 
 .detail-panel {
-  flex: 1;
+  flex: 0 0 60%;
   overflow-y: auto;
   background: var(--bg);
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+}
+
+.detail-panel.hidden { display: none; }
+
+.detail-panel-header {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-light);
+  flex-shrink: 0;
 }
 
 /* --- Filter Bar --- */
@@ -886,7 +951,7 @@ textarea:focus { outline: 2px solid var(--text); outline-offset: -1px; }
 
 /* Small desktop: 13" laptop */
 @media (max-width: 1366px) {
-  .job-list-panel { width: 280px; min-width: 240px; }
+  .dashboard.detail-open .job-list-panel { flex: 0 0 35%; min-width: 260px; }
   .detail-panel { padding: var(--space-md) var(--space-lg); }
   .tagline { display: none; }
   .detail-header h2 { font-size: 16px; }
@@ -894,12 +959,11 @@ textarea:focus { outline: 2px solid var(--text); outline-offset: -1px; }
 
 /* Large desktop: 24" monitor */
 @media (min-width: 1728px) {
-  .job-list-panel { width: 360px; }
+  .dashboard.detail-open .job-list-panel { flex: 0 0 45%; }
   .detail-content { max-width: 840px; }
 }
 
 /* Ultrawide: 2560px+ */
 @media (min-width: 2400px) {
-  .job-list-panel { width: 400px; }
   .detail-content { max-width: 900px; margin: 0 auto; }
 }

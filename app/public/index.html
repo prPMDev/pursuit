@@ -27,8 +27,9 @@
     <span class="profile-strip-text" id="profile-strip-text">No profile set — click Profile to get started</span>
   </div>
 
-  <main class="split-view">
-    <aside class="job-list-panel" id="job-list-panel">
+  <main class="dashboard">
+    <!-- Job list (full width by default) -->
+    <div class="job-list-panel" id="job-list-panel">
       <div class="filter-bar">
         <div class="filter-group">
           <button class="filter-btn active" data-filter="all">All</button>
@@ -41,22 +42,17 @@
           <button class="filter-btn" data-filter="applied">Applied</button>
         </div>
       </div>
-      <div class="job-list" id="job-list">
-        <div class="empty-state" id="empty-state">
-          <div class="empty-icon" data-icon="compass"></div>
-          <p class="empty-title">No jobs yet</p>
-          <p class="empty-body">Click <strong>Fetch Jobs</strong> to auto-browse LinkedIn and Indeed, or <strong>Add Jobs</strong> to paste listings manually.</p>
-        </div>
-      </div>
-    </aside>
+      <div id="job-list-table"></div>
+    </div>
 
-    <section class="detail-panel" id="detail-panel">
-      <div class="detail-empty" id="detail-empty">
-        <div class="empty-icon" data-icon="inbox"></div>
-        <p class="empty-title">No job selected</p>
-        <p class="empty-body">Click a job from the list to see scanner rationale, evaluator analysis, and take action.</p>
+    <!-- Detail panel (slides in from right, pushes list) -->
+    <section class="detail-panel hidden" id="detail-panel">
+      <div class="detail-panel-header">
+        <button class="btn btn-icon-only btn-ghost" id="btn-close-detail" title="Close">
+          <span data-icon="x"></span>
+        </button>
       </div>
-      <div class="detail-content hidden" id="detail-content">
+      <div class="detail-content" id="detail-content">
         <div class="detail-header">
           <h2 id="detail-company"></h2>
           <h3 id="detail-role"></h3>

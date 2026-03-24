@@ -7,6 +7,11 @@ import { escapeHtml } from './util.js';
 let currentJob = null;
 
 export function initJobDetail() {
+  // Close detail panel
+  document.getElementById('btn-close-detail')?.addEventListener('click', () => {
+    closeDetailPanel();
+  });
+
   // Evaluate button
   document.getElementById('btn-evaluate').addEventListener('click', async () => {
     if (!currentJob) return;
@@ -81,10 +86,25 @@ async function updatePipelineStatus(status) {
   }
 }
 
+function openDetailPanel() {
+  const panel = document.getElementById('detail-panel');
+  const main = document.querySelector('.dashboard');
+  panel.classList.remove('hidden');
+  main.classList.add('detail-open');
+}
+
+function closeDetailPanel() {
+  const panel = document.getElementById('detail-panel');
+  const main = document.querySelector('.dashboard');
+  panel.classList.add('hidden');
+  main.classList.remove('detail-open');
+  currentJob = null;
+}
+
 export function showJobDetail(job) {
   currentJob = job;
 
-  document.getElementById('detail-empty').classList.add('hidden');
+  openDetailPanel();
   document.getElementById('detail-content').classList.remove('hidden');
 
   // Reset decision/pipeline state
