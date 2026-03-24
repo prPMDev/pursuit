@@ -3,6 +3,7 @@ import { initJobList, refreshJobList } from './job-list.js';
 import { initJobDetail } from './job-detail.js';
 import { initProfile } from './profile.js';
 import { initSettings } from './settings.js';
+import { checkSetupNeeded, showSetup, initSetup } from './setup.js';
 
 // --- API Helpers ---
 
@@ -150,8 +151,16 @@ async function init() {
   initJobDetail();
   initProfile();
   initSettings();
-  updateProfileStrip();
-  refreshJobList();
+  initSetup();
+
+  // Check if first-time setup is needed
+  const needsSetup = await checkSetupNeeded();
+  if (needsSetup) {
+    showSetup();
+  } else {
+    updateProfileStrip();
+    refreshJobList();
+  }
 }
 
 init();

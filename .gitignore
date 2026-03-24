@@ -20,9 +20,12 @@ data/profile.md
 data/jobs/
 data/scans/
 data/evaluations/
+data/references/
 data/decisions.md
 data/patterns.md
+data/preferences.md
 data/settings.json
+data/.seen-jobs.json
 
 # OS files
 .DS_Store

@@ -4,6 +4,8 @@ import { readFile, writeFile, readdir, mkdir, access } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
+import { fetchJobs } from './browser.js';
+import { SETUP_STEPS, buildSynthesisContext, extractJSON, extractProfileMarkdown } from './setup.js';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const ROOT = resolve(__dirname, '..');
@@ -35,6 +37,7 @@ async function ensureDataDirs() {
   await ensureDir(join(DATA, 'jobs'));
   await ensureDir(join(DATA, 'scans'));
   await ensureDir(join(DATA, 'evaluations'));
+  await ensureDir(join(DATA, 'references'));
 }
 
 async function readMarkdown(filepath) {
@@ -299,7 +302,21 @@ app.post('/api/scan', async (req, res) => {
     const scannerPrompt = await readMarkdown(SCANNER_PROMPT);
     if (!scannerPrompt) return res.status(500).json({ error: 'Scanner prompt not found' });
 
-    const userMessage = `## My Profile\n\n${profile}\n\n## Job Listings\n\n${listings}`;
+    // Load reference examples to calibrate the scanner
+    let referencesContext = '';
+    const refsDir = join(DATA, 'references');
+    const refFiles = await readdir(refsDir).catch(() => []);
+    if (refFiles.length > 0) {
+      const refParts = ['\n\n## Reference Examples (What I Love/Hate)\n\nUse these to calibrate your filtering — they show what "good" and "bad" look like for me specifically.\n'];
+      for (const file of refFiles.filter(f => f.endsWith('.md')).slice(0, 6)) {
+        const content = await readFile(join(refsDir, file), 'utf-8');
+        refParts.push(content);
+        refParts.push('---');
+      }
+      referencesContext = refParts.join('\n');
+    }
+
+    const userMessage = `## My Profile\n\n${profile}${referencesContext}\n\n## Job Listings\n\n${listings}`;
     const result = await callClaude(scannerPrompt, userMessage);
 
     // Write to data/scans/
@@ -396,6 +413,175 @@ app.put('/api/settings', async (req, res) => {
   res.json({ ok: true });
 });
 
+// --- Setup Flow ---
+
+// Get setup state (has the user completed setup?)
+app.get('/api/setup/status', async (req, res) => {
+  const profile = await readMarkdown(join(DATA, 'profile.md'));
+  const refs = await readdir(join(DATA, 'references')).catch(() => []);
+  const prefs = await readMarkdown(join(DATA, 'preferences.md'));
+
+  const hasProfile = profile && !profile.includes('Customize This Section') && !profile.includes('<!-- Example:');
+  const hasReferences = refs.filter(f => f.endsWith('.md')).length >= 2;
+  const hasPreferences = !!prefs;
+
+  res.json({
+    setupComplete: hasProfile && hasReferences,
+    hasProfile,
+    hasReferences,
+    referenceCount: refs.filter(f => f.endsWith('.md')).length,
+    hasPreferences,
+    steps: SETUP_STEPS.map(s => ({ id: s.id, action: s.action })),
+  });
+});
+
+// Chat endpoint for setup conversation
+app.post('/api/setup/chat', async (req, res) => {
+  try {
+    const { stepId, userMessage, conversationHistory } = req.body;
+
+    const step = SETUP_STEPS.find(s => s.id === stepId);
+    if (!step) return res.status(400).json({ error: 'Invalid step' });
+
+    let systemPrompt = step.systemPrompt;
+    let userMsg = userMessage;
+
+    // For synthesis step, build context from all previous conversations
+    if (step.action === 'synthesize') {
+      userMsg = buildSynthesisContext(conversationHistory || {});
+    }
+
+    const response = await callClaude(systemPrompt, userMsg);
+
+    // Extract any structured data from response
+    const extracted = extractJSON(response);
+
+    res.json({
+      response,
+      extracted,
+      stepId,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Save the synthesized profile from setup
+app.post('/api/setup/save-profile', async (req, res) => {
+  try {
+    const { profileText } = req.body;
+    if (!profileText) return res.status(400).json({ error: 'Profile text required' });
+
+    const profile = extractProfileMarkdown(profileText);
+    await writeFile(join(DATA, 'profile.md'), profile);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Save search queries from setup
+app.post('/api/setup/save-queries', async (req, res) => {
+  try {
+    const { queries } = req.body;
+    if (queries) {
+      settings.searchQueries = queries;
+      await saveSettings();
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// --- Reference Examples ---
+
+// Save a reference example (loved/hated/maybe)
+app.post('/api/references', async (req, res) => {
+  try {
+    const { type, listing, reasoning, extracted } = req.body;
+    if (!type || !listing) return res.status(400).json({ error: 'Type and listing required' });
+
+    const refsDir = join(DATA, 'references');
+    await ensureDir(refsDir);
+
+    const filename = `${type}-${datePrefix()}-${Date.now()}.md`;
+    const content = [
+      `# Reference: ${type.charAt(0).toUpperCase() + type.slice(1)}`,
+      ``,
+      `**Type:** ${type}`,
+      `**Date:** ${datePrefix()}`,
+      ``,
+      `## Job Listing`,
+      ``,
+      listing,
+      ``,
+      `## Why I ${type === 'loved' ? 'Love' : type === 'hated' ? 'Hate' : 'Am Torn On'} This`,
+      ``,
+      reasoning || '',
+      ``,
+      extracted ? `## Extracted Signals\n\n\`\`\`json\n${JSON.stringify(extracted, null, 2)}\n\`\`\`` : '',
+    ].join('\n');
+
+    await writeFile(join(refsDir, filename), content);
+    res.json({ ok: true, filename });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// List reference examples
+app.get('/api/references', async (req, res) => {
+  try {
+    const refsDir = join(DATA, 'references');
+    const files = await readdir(refsDir).catch(() => []);
+    const refs = [];
+
+    for (const file of files.filter(f => f.endsWith('.md'))) {
+      const content = await readFile(join(refsDir, file), 'utf-8');
+      const typeMatch = file.match(/^(loved|hated|maybe)/);
+      refs.push({
+        filename: file,
+        type: typeMatch ? typeMatch[1] : 'unknown',
+        preview: content.substring(0, 200),
+      });
+    }
+
+    res.json({ references: refs });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// --- User Preferences ---
+
+app.get('/api/preferences', async (req, res) => {
+  const content = await readMarkdown(join(DATA, 'preferences.md'));
+  if (!content) {
+    // Return defaults
+    return res.json({
+      content: null,
+      defaults: {
+        fetchTime: '08:00',
+        maxFetchesPerDay: 3,
+        notificationStyle: 'nudge',
+        theme: 'light',
+      },
+    });
+  }
+  res.json({ content });
+});
+
+app.put('/api/preferences', async (req, res) => {
+  try {
+    const { content } = req.body;
+    await writeFile(join(DATA, 'preferences.md'), content);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Manual job input (paste listings without scanning)
 app.post('/api/jobs/manual', async (req, res) => {
   try {
@@ -406,6 +592,187 @@ app.post('/api/jobs/manual', async (req, res) => {
     await writeFile(join(DATA, 'jobs', filename), listings);
     res.json({ ok: true, filename });
   } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Fetch — trigger Puppeteer to browse job boards
+// Max 3 fetches per day. Jobs are posted when they're posted.
+let fetchInProgress = false;
+const MAX_DAILY_FETCHES = 3;
+
+const fetchNudges = [
+  // After fetch 1 — encouraging
+  "Fresh batch in. Now pick the 2-3 worth your time and go deep on those.",
+  // After fetch 2 — gentle reminder
+  "Second scan today. Remember: the best opportunities reward depth, not refresh rate.",
+  // After fetch 3 — the limit, with warmth
+  "Last scan for today. You've seen what's out there — now go pursue something. The board isn't going anywhere overnight.",
+];
+
+const fetchLimitMessages = [
+  "You've already scanned 3 times today. Jobs are posted when they're posted — refreshing won't make new ones appear. Go work on an application instead.",
+  "Three's the limit. LinkedIn isn't a slot machine. Go write that outreach message you've been putting off.",
+  "Nope, 3 scans is plenty. Your energy is better spent on one great application than another round of browsing.",
+  "The job board will survive without you for a few hours. Go do something that moves a real opportunity forward.",
+];
+
+function getTodaysFetchCount() {
+  const today = datePrefix();
+  const fetches = settings.fetchHistory || [];
+  return fetches.filter(f => f.startsWith(today)).length;
+}
+
+function recordFetch() {
+  if (!settings.fetchHistory) settings.fetchHistory = [];
+  settings.fetchHistory.push(new Date().toISOString());
+  // Keep only last 7 days of history
+  const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  settings.fetchHistory = settings.fetchHistory.filter(f => new Date(f).getTime() > weekAgo);
+}
+
+function checkFetchLimit(res) {
+  const count = getTodaysFetchCount();
+  if (count >= MAX_DAILY_FETCHES) {
+    const msg = fetchLimitMessages[Math.floor(Math.random() * fetchLimitMessages.length)];
+    return res.status(429).json({
+      error: msg,
+      fetchesToday: count,
+      limit: MAX_DAILY_FETCHES,
+      nudge: true,
+    });
+  }
+  return null; // OK to proceed
+}
+
+app.get('/api/fetch/status', (req, res) => {
+  const count = getTodaysFetchCount();
+  res.json({
+    fetchesToday: count,
+    remaining: Math.max(0, MAX_DAILY_FETCHES - count),
+    limit: MAX_DAILY_FETCHES,
+    inProgress: fetchInProgress,
+  });
+});
+
+app.post('/api/fetch', async (req, res) => {
+  if (fetchInProgress) {
+    return res.status(409).json({ error: 'Fetch already in progress' });
+  }
+
+  const limitResponse = checkFetchLimit(res);
+  if (limitResponse) return limitResponse;
+
+  const searchQueries = settings.searchQueries || [];
+  if (searchQueries.length === 0) {
+    return res.status(400).json({
+      error: 'No search queries configured. Add them in Settings.',
+    });
+  }
+
+  fetchInProgress = true;
+  const fetchNumber = getTodaysFetchCount(); // 0-indexed before recording
+  recordFetch();
+  settings.lastFetchTime = new Date().toISOString();
+  await saveSettings();
+
+  try {
+    const result = await fetchJobs(searchQueries, {
+      dataDir: DATA,
+      headless: true,
+      maxPages: 3,
+      getSummaries: false,
+    });
+
+    fetchInProgress = false;
+    res.json({
+      ok: true,
+      totalFetched: result.totalFetched,
+      files: result.files,
+      fetchesToday: fetchNumber + 1,
+      remaining: MAX_DAILY_FETCHES - fetchNumber - 1,
+      nudge: fetchNudges[fetchNumber] || fetchNudges[fetchNudges.length - 1],
+    });
+  } catch (err) {
+    fetchInProgress = false;
+    res.status(500).json({ error: `Fetch failed: ${err.message}` });
+  }
+});
+
+// Fetch + Scan — fetch jobs then immediately scan them
+app.post('/api/fetch-and-scan', async (req, res) => {
+  if (fetchInProgress) {
+    return res.status(409).json({ error: 'Fetch already in progress' });
+  }
+
+  const limitResponse = checkFetchLimit(res);
+  if (limitResponse) return limitResponse;
+
+  const searchQueries = settings.searchQueries || [];
+  if (searchQueries.length === 0) {
+    return res.status(400).json({
+      error: 'No search queries configured. Add them in Settings.',
+    });
+  }
+
+  fetchInProgress = true;
+  const fetchNumber = getTodaysFetchCount();
+  recordFetch();
+  settings.lastFetchTime = new Date().toISOString();
+  await saveSettings();
+
+  try {
+    // Step 1: Fetch jobs
+    const result = await fetchJobs(searchQueries, {
+      dataDir: DATA,
+      headless: true,
+      maxPages: 3,
+      getSummaries: false,
+    });
+
+    fetchInProgress = false;
+
+    if (result.totalFetched === 0) {
+      return res.json({ ok: true, totalFetched: 0, message: 'No new jobs found.' });
+    }
+
+    // Step 2: Read the fetched jobs and scan them
+    let allListings = '';
+    for (const file of result.files) {
+      const content = await readFile(join(DATA, 'jobs', file), 'utf-8');
+      allListings += content + '\n\n';
+    }
+
+    const profile = await readMarkdown(join(DATA, 'profile.md'));
+    if (!profile) {
+      return res.json({
+        ok: true,
+        totalFetched: result.totalFetched,
+        message: 'Jobs fetched but not scanned — no profile set.',
+        files: result.files,
+      });
+    }
+
+    const scannerPrompt = await readMarkdown(SCANNER_PROMPT);
+    const userMessage = `## My Profile\n\n${profile}\n\n## Job Listings\n\n${allListings}`;
+    const scanResult = await callClaude(scannerPrompt, userMessage);
+
+    const scanFilename = `${datePrefix()}-auto-scan.md`;
+    await writeFile(join(DATA, 'scans', scanFilename), scanResult);
+
+    const parsed = parseScannerOutput(scanResult);
+    fetchInProgress = false;
+    res.json({
+      ok: true,
+      totalFetched: result.totalFetched,
+      scanFile: scanFilename,
+      fetchesToday: fetchNumber + 1,
+      remaining: MAX_DAILY_FETCHES - fetchNumber - 1,
+      nudge: fetchNudges[fetchNumber] || fetchNudges[fetchNudges.length - 1],
+      ...parsed,
+    });
+  } catch (err) {
+    fetchInProgress = false;
     res.status(500).json({ error: err.message });
   }
 });

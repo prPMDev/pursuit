@@ -15,7 +15,8 @@
     </div>
     <div class="topbar-actions">
       <span class="fetch-status" id="fetch-status"></span>
-      <button class="btn btn-sm" id="btn-add-jobs" title="Paste job listings">+ Add Jobs</button>
+      <button class="btn btn-sm" id="btn-fetch-now" title="Browse job boards with Puppeteer">Fetch Jobs</button>
+      <button class="btn btn-sm" id="btn-add-jobs" title="Paste job listings manually">+ Add Jobs</button>
       <button class="btn btn-sm btn-primary" id="btn-scan" title="Scan unscanned jobs">Scan</button>
       <button class="btn btn-icon" id="btn-profile" title="Profile">&#x1f464;</button>
       <button class="btn btn-icon" id="btn-settings" title="Settings">&#x2699;</button>
@@ -141,12 +142,46 @@
         <div id="api-key-status"></div>
       </div>
       <div class="settings-section">
+        <h4>Search Queries (for Fetch Jobs)</h4>
+        <p class="modal-hint">One per line. Format: <code>query | location | sources</code><br>
+          Example: <code>Senior PM Integrations | Remote | linkedin, indeed</code></p>
+        <textarea id="input-search-queries" rows="4" placeholder="Senior Product Manager | Remote | linkedin, indeed"></textarea>
+        <div style="margin-top: 6px;">
+          <button class="btn btn-sm btn-primary" id="btn-save-queries">Save Queries</button>
+        </div>
+      </div>
+      <div class="settings-section">
         <h4>Prompts in Use</h4>
         <div id="prompts-info"></div>
       </div>
       <div class="settings-section">
+        <h4>Fetch Limits</h4>
+        <p>3 fetches per day. Jobs are posted when they're posted — your energy is better spent pursuing than pulling.</p>
+        <p style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">
+          Future: scheduled daily fetch at a time you choose (e.g., 8am before coffee).
+        </p>
+      </div>
+      <div class="settings-section">
         <h4>Data</h4>
         <p><a href="#" id="btn-view-decisions">View Decision Log</a></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Setup Overlay (first-time flow) -->
+  <div class="setup-overlay" id="setup-overlay" style="display:none;">
+    <div class="setup-container">
+      <div class="setup-header">
+        <h2>Pursuit Setup</h2>
+        <span class="setup-progress" id="setup-progress">Step 1 of 9</span>
+      </div>
+      <div class="setup-chat" id="setup-chat"></div>
+      <div class="setup-input-area">
+        <textarea id="setup-input" rows="4" placeholder="Type your response..." style="display:none;"></textarea>
+        <div class="setup-actions">
+          <button class="btn btn-primary" id="setup-send" style="display:none;">Send</button>
+          <button class="btn btn-primary" id="setup-next" style="display:none;">Let's go</button>
+        </div>
       </div>
     </div>
   </div>
