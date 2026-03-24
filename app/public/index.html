@@ -15,11 +15,12 @@
     </div>
     <div class="topbar-actions">
       <span class="fetch-status" id="fetch-status"></span>
-      <button class="btn btn-sm" id="btn-fetch-now" title="Browse job boards with Puppeteer">Fetch Jobs</button>
-      <button class="btn btn-sm" id="btn-add-jobs" title="Paste job listings manually">+ Add Jobs</button>
-      <button class="btn btn-sm btn-primary" id="btn-scan" title="Scan unscanned jobs">Scan</button>
-      <button class="btn btn-icon" id="btn-profile" title="Profile">&#x1f464;</button>
-      <button class="btn btn-icon" id="btn-settings" title="Settings">&#x2699;</button>
+      <button class="btn btn-sm btn-ghost" id="btn-fetch-now" title="Browse job boards"><span class="btn-icon-inline" data-icon="refresh-cw"></span> Fetch Jobs</button>
+      <button class="btn btn-sm btn-ghost" id="btn-add-jobs" title="Paste job listings"><span class="btn-icon-inline" data-icon="plus"></span> Add Jobs</button>
+      <button class="btn btn-sm btn-primary" id="btn-scan" title="Scan jobs"><span class="btn-icon-inline" data-icon="filter"></span> Scan</button>
+      <div class="topbar-divider"></div>
+      <button class="btn btn-icon-only" id="btn-profile" title="Profile"><span data-icon="user"></span></button>
+      <button class="btn btn-icon-only" id="btn-settings" title="Settings"><span data-icon="settings"></span></button>
     </div>
   </header>
 
@@ -33,15 +34,22 @@
     <!-- Left Panel: Job List -->
     <aside class="job-list-panel" id="job-list-panel">
       <div class="filter-bar">
-        <button class="filter-btn active" data-filter="all">All</button>
-        <button class="filter-btn" data-filter="EVALUATE">Evaluate</button>
-        <button class="filter-btn" data-filter="MAYBE">Maybe</button>
-        <button class="filter-btn" data-filter="SKIP">Skipped</button>
+        <div class="filter-group">
+          <button class="filter-btn active" data-filter="all">All</button>
+          <button class="filter-btn" data-filter="EVALUATE">Evaluate</button>
+          <button class="filter-btn" data-filter="MAYBE">Maybe</button>
+          <button class="filter-btn" data-filter="SKIP">Skipped</button>
+        </div>
+        <div class="filter-group">
+          <button class="filter-btn" data-filter="pursuing">Pursuing</button>
+          <button class="filter-btn" data-filter="applied">Applied</button>
+        </div>
       </div>
       <div class="job-list" id="job-list">
         <div class="empty-state" id="empty-state">
-          <p>No jobs yet.</p>
-          <p>Click <strong>+ Add Jobs</strong> to paste listings, then <strong>Scan</strong> to filter them.</p>
+          <div class="empty-icon" data-icon="compass"></div>
+          <p class="empty-title">No jobs yet</p>
+          <p class="empty-body">Click <strong>Fetch Jobs</strong> to auto-browse LinkedIn and Indeed, or <strong>Add Jobs</strong> to paste listings manually.</p>
         </div>
       </div>
     </aside>
@@ -49,7 +57,9 @@
     <!-- Right Panel: Job Detail -->
     <section class="detail-panel" id="detail-panel">
       <div class="detail-empty" id="detail-empty">
-        <p>Select a job from the list to see details.</p>
+        <div class="empty-icon" data-icon="inbox"></div>
+        <p class="empty-title">No job selected</p>
+        <p class="empty-body">Click a job from the list to see scanner rationale, evaluator analysis, and take action.</p>
       </div>
       <div class="detail-content" id="detail-content" style="display:none;">
         <div class="detail-header">
@@ -81,18 +91,32 @@
           </div>
         </div>
 
-        <div class="detail-section">
-          <h4>Actions</h4>
-          <div class="action-buttons">
-            <button class="btn btn-success" id="btn-pursue">Pursue</button>
-            <button class="btn btn-danger" id="btn-pass">Pass</button>
-            <button class="btn btn-muted" id="btn-save-later">Save for Later</button>
-          </div>
-        </div>
-
         <div class="detail-section" id="detail-signal-section">
           <h4>Key Signal</h4>
           <p id="detail-signal"></p>
+        </div>
+
+        <div class="detail-section" id="detail-actions-section">
+          <h4>Decision</h4>
+          <!-- Initial decision (before any action) -->
+          <div class="action-buttons" id="action-initial">
+            <button class="btn btn-pursue" id="btn-pursue"><span data-icon="target"></span> Pursue</button>
+            <button class="btn btn-pass" id="btn-pass"><span data-icon="x"></span> Pass</button>
+            <button class="btn btn-save" id="btn-save-later"><span data-icon="bookmark"></span> Save</button>
+          </div>
+          <!-- After Pursue — next steps -->
+          <div class="action-pipeline" id="action-pipeline" style="display:none;">
+            <div class="pipeline-status" id="pipeline-status"></div>
+            <div class="pipeline-actions">
+              <button class="btn btn-sm btn-ghost" id="btn-mark-applied"><span data-icon="send"></span> Mark Applied</button>
+              <button class="btn btn-sm btn-ghost" id="btn-mark-interview"><span data-icon="message-square"></span> Interview</button>
+              <button class="btn btn-sm btn-ghost" id="btn-mark-offered"><span data-icon="trophy"></span> Offered</button>
+              <button class="btn btn-sm btn-ghost" id="btn-mark-rejected"><span data-icon="ban"></span> Rejected</button>
+            </div>
+            <div class="pipeline-notes">
+              <textarea id="pipeline-notes-input" rows="2" placeholder="Notes (hiring manager, next steps, interview date...)"></textarea>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -103,7 +127,7 @@
     <div class="modal-content">
       <div class="modal-header">
         <h3>Add Job Listings</h3>
-        <button class="btn btn-icon modal-close" data-modal="modal-add-jobs">&times;</button>
+        <button class="btn btn-icon-only modal-close" data-modal="modal-add-jobs"><span data-icon="x"></span></button>
       </div>
       <p class="modal-hint">Paste job listings from LinkedIn, Indeed, or any source. One per block, separated by blank lines or ---.</p>
       <textarea id="input-listings" rows="12" placeholder="Senior PM at TechCorp, Remote&#10;Own integrations roadmap, 5+ years experience&#10;https://linkedin.com/jobs/view/123&#10;&#10;---&#10;&#10;Staff PM - Platform at HealthCo&#10;NYC Hybrid, Series B&#10;https://indeed.com/viewjob?id=456"></textarea>
@@ -119,7 +143,7 @@
     <div class="modal-content modal-wide">
       <div class="modal-header">
         <h3>Professional Profile</h3>
-        <button class="btn btn-icon modal-close" data-modal="modal-profile">&times;</button>
+        <button class="btn btn-icon-only modal-close" data-modal="modal-profile"><span data-icon="x"></span></button>
       </div>
       <p class="modal-hint">Your professional identity. Be specific, be honest. The Scanner works better when you are.</p>
       <textarea id="input-profile" rows="20" placeholder="Loading profile..."></textarea>
@@ -135,7 +159,7 @@
     <div class="modal-content">
       <div class="modal-header">
         <h3>Settings</h3>
-        <button class="btn btn-icon modal-close" data-modal="modal-settings">&times;</button>
+        <button class="btn btn-icon-only modal-close" data-modal="modal-settings"><span data-icon="x"></span></button>
       </div>
       <div class="settings-section">
         <h4>API Key</h4>
