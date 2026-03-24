@@ -499,9 +499,40 @@ app.get('/api/settings', async (req, res) => {
 
 app.put('/api/settings', async (req, res) => {
   Object.assign(settings, req.body);
+
+  // Auto-generate search queries from structured config
+  if (settings.searchConfig) {
+    settings.searchQueries = generateSearchQueries(settings.searchConfig);
+  }
+
   await saveSettings();
   res.json({ ok: true });
 });
+
+// Generate search queries from structured config (title × location cross-product)
+function generateSearchQueries(config) {
+  const titles = config.titles?.values || [];
+  const locations = config.locations || [];
+
+  if (titles.length === 0) return [];
+
+  // If no locations, use empty string (lets job board use default)
+  const locs = locations.length > 0 ? locations : [''];
+
+  const queries = [];
+  for (const title of titles) {
+    for (const loc of locs) {
+      queries.push({
+        query: title,
+        location: loc,
+        sources: ['linkedin', 'indeed'],
+      });
+    }
+  }
+
+  // Cap at 12 queries to avoid rate limit issues
+  return queries.slice(0, 12);
+}
 
 // --- Setup Flow ---
 

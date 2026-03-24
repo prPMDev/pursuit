@@ -1,9 +1,15 @@
-// Pursuit Dashboard — Settings panel
+// Pursuit Dashboard — Settings panel (structured search config)
 import { api, showLoading, hideLoading, health } from './app.js';
 import { showModal, hideModal } from './modal.js';
 import { refreshJobList } from './job-list.js';
 import { html } from './util.js';
 import { icon } from './icons.js';
+import { TagInput } from './tag-input.js';
+
+let taxonomies = { titles: [], industries: [], domains: [] };
+let tagInputs = {};
+
+const FLEX_LABELS = ['Exact', 'Tight', 'Medium', 'Loose', 'Wide Open'];
 
 export function renderSettingsModal() {
   const container = document.getElementById('modal-container');
@@ -11,35 +17,97 @@ export function renderSettingsModal() {
   el.className = 'modal hidden';
   el.id = 'modal-settings';
   el.innerHTML = html`
-    <div class="modal-content">
+    <div class="modal-content modal-wide">
       <div class="modal-header">
         <h3>Settings</h3>
         <button class="btn btn-icon-only modal-close" data-modal="modal-settings">${icon('x', 16)}</button>
       </div>
+
       <div class="settings-section">
         <h4>API Key</h4>
         <div id="api-key-status"></div>
       </div>
+
       <div class="settings-section">
-        <h4>Search Queries (for Fetch Jobs)</h4>
-        <p class="modal-hint">One per line. Format: <code>query | location | sources</code><br>
-          Example: <code>Senior PM Integrations | Remote | linkedin, indeed</code></p>
-        <textarea id="input-search-queries" rows="4" placeholder="Senior Product Manager | Remote | linkedin, indeed"></textarea>
-        <div style="margin-top: 6px;">
-          <button class="btn btn-sm btn-primary" id="btn-save-queries">Save Queries</button>
+        <h4>Search Configuration</h4>
+        <p class="modal-hint">Tags tell the fetcher what to search for. Flexibility sliders tell the scanner how strictly to match.</p>
+
+        <div class="settings-field">
+          <label>Job Titles</label>
+          <div id="settings-titles-input"></div>
+          <div class="setup-slider-row">
+            <span class="setup-slider-label">Flexibility</span>
+            <sl-range id="settings-titles-flex" min="0" max="4" value="2" step="1" tooltip="none"></sl-range>
+            <span class="setup-slider-value" id="settings-titles-flex-label">Medium</span>
+          </div>
+        </div>
+
+        <div class="settings-field">
+          <label>Industries</label>
+          <div id="settings-industries-input"></div>
+          <div class="setup-slider-row">
+            <span class="setup-slider-label">Flexibility</span>
+            <sl-range id="settings-industries-flex" min="0" max="4" value="2" step="1" tooltip="none"></sl-range>
+            <span class="setup-slider-value" id="settings-industries-flex-label">Medium</span>
+          </div>
+        </div>
+
+        <div class="settings-field">
+          <label>Domains / Focus Areas</label>
+          <div id="settings-domains-input"></div>
+          <div class="setup-slider-row">
+            <span class="setup-slider-label">Flexibility</span>
+            <sl-range id="settings-domains-flex" min="0" max="4" value="2" step="1" tooltip="none"></sl-range>
+            <span class="setup-slider-value" id="settings-domains-flex-label">Medium</span>
+          </div>
+        </div>
+
+        <div class="settings-field">
+          <label>Locations</label>
+          <div id="settings-locations-input"></div>
+        </div>
+
+        <div class="settings-field">
+          <label>Levels</label>
+          <div class="setup-checkbox-group">
+            <label class="setup-checkbox"><input type="checkbox" name="settings-levels" value="mid"> Mid</label>
+            <label class="setup-checkbox"><input type="checkbox" name="settings-levels" value="senior"> Senior</label>
+            <label class="setup-checkbox"><input type="checkbox" name="settings-levels" value="lead"> Lead</label>
+            <label class="setup-checkbox"><input type="checkbox" name="settings-levels" value="director"> Director</label>
+          </div>
+        </div>
+
+        <div class="settings-field">
+          <label>Company Size</label>
+          <div class="setup-checkbox-group">
+            <label class="setup-checkbox"><input type="checkbox" name="settings-company-size" value="startup"> Startup</label>
+            <label class="setup-checkbox"><input type="checkbox" name="settings-company-size" value="growth"> Growth</label>
+            <label class="setup-checkbox"><input type="checkbox" name="settings-company-size" value="enterprise"> Enterprise</label>
+          </div>
+        </div>
+
+        <div style="margin-top: 12px;">
+          <button class="btn btn-sm btn-primary" id="btn-save-search-config">Save Search Config</button>
+          <span class="settings-save-status" id="search-config-status"></span>
         </div>
       </div>
+
+      <div class="settings-section">
+        <h4>Generated Search Queries</h4>
+        <p class="modal-hint">Auto-generated from your tags + locations. These are what the fetcher sends to LinkedIn/Indeed.</p>
+        <div id="generated-queries" class="settings-queries-list"></div>
+      </div>
+
       <div class="settings-section">
         <h4>Prompts in Use</h4>
         <div id="prompts-info"></div>
       </div>
+
       <div class="settings-section">
         <h4>Fetch Limits</h4>
         <p>3 fetches per day. Jobs are posted when they're posted — your energy is better spent pursuing than pulling.</p>
-        <p style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">
-          Future: scheduled daily fetch at a time you choose (e.g., 8am before coffee).
-        </p>
       </div>
+
       <div class="settings-section">
         <h4>Data</h4>
         <p><a href="#" id="btn-view-decisions">View Decision Log</a></p>
@@ -57,31 +125,80 @@ export function renderSettingsModal() {
   });
 }
 
+async function initTagInputsForSettings() {
+  try {
+    const resp = await fetch('/data/taxonomies.json');
+    taxonomies = await resp.json();
+  } catch { /* use empty defaults */ }
+
+  // Only init once
+  if (tagInputs.titles) return;
+
+  tagInputs.titles = new TagInput(document.getElementById('settings-titles-input'), {
+    suggestions: taxonomies.titles,
+    placeholder: 'Type a job title...',
+  });
+
+  tagInputs.industries = new TagInput(document.getElementById('settings-industries-input'), {
+    suggestions: taxonomies.industries,
+    placeholder: 'Type an industry...',
+  });
+
+  tagInputs.domains = new TagInput(document.getElementById('settings-domains-input'), {
+    suggestions: taxonomies.domains,
+    placeholder: 'Type a domain...',
+  });
+
+  tagInputs.locations = new TagInput(document.getElementById('settings-locations-input'), {
+    suggestions: ['Remote', 'San Francisco', 'New York', 'Los Angeles', 'Seattle', 'Austin', 'Chicago', 'Boston', 'Denver', 'London', 'Toronto'],
+    placeholder: 'Type a location...',
+  });
+
+  // Bind flex label updates
+  bindFlexLabel('settings-titles-flex', 'settings-titles-flex-label');
+  bindFlexLabel('settings-industries-flex', 'settings-industries-flex-label');
+  bindFlexLabel('settings-domains-flex', 'settings-domains-flex-label');
+}
+
+function bindFlexLabel(sliderId, labelId) {
+  const slider = document.getElementById(sliderId);
+  const label = document.getElementById(labelId);
+  if (!slider || !label) return;
+  const update = () => { label.textContent = FLEX_LABELS[slider.value] || 'Medium'; };
+  slider.addEventListener('sl-input', update);
+  update();
+}
+
 export function initSettings() {
   // Open settings modal
   document.getElementById('btn-settings').addEventListener('click', async () => {
     showModal('modal-settings');
+    await initTagInputsForSettings();
     await loadSettingsUI();
   });
 
-  // Save search queries
-  document.getElementById('btn-save-queries')?.addEventListener('click', async () => {
-    const textarea = document.getElementById('input-search-queries');
-    const lines = textarea.value.split('\n').filter(l => l.trim());
-    const queries = lines.map(line => {
-      const parts = line.split('|').map(p => p.trim());
-      return {
-        query: parts[0] || '',
-        location: parts[1] || '',
-        sources: parts[2] ? parts[2].split(',').map(s => s.trim().toLowerCase()) : ['linkedin', 'indeed'],
-      };
-    }).filter(q => q.query);
+  // Save search config
+  document.getElementById('btn-save-search-config')?.addEventListener('click', async () => {
+    const searchConfig = {
+      titles: { values: tagInputs.titles?.getValue() || [], flexibility: parseInt(document.getElementById('settings-titles-flex')?.value ?? 2) },
+      industries: { values: tagInputs.industries?.getValue() || [], flexibility: parseInt(document.getElementById('settings-industries-flex')?.value ?? 2) },
+      domains: { values: tagInputs.domains?.getValue() || [], flexibility: parseInt(document.getElementById('settings-domains-flex')?.value ?? 2) },
+      locations: tagInputs.locations?.getValue() || [],
+      levels: [...document.querySelectorAll('[name="settings-levels"]:checked')].map(el => el.value),
+      companySize: [...document.querySelectorAll('[name="settings-company-size"]:checked')].map(el => el.value),
+    };
 
     try {
       await api('/settings', {
         method: 'PUT',
-        body: { searchQueries: queries },
+        body: { searchConfig },
       });
+      const statusEl = document.getElementById('search-config-status');
+      statusEl.textContent = 'Saved';
+      statusEl.style.color = 'var(--green)';
+      setTimeout(() => { statusEl.textContent = ''; }, 2000);
+
+      // Reload to show generated queries
       await loadSettingsUI();
     } catch (err) {
       alert(`Failed to save: ${err.message}`);
@@ -155,14 +272,51 @@ async function loadSettingsUI() {
       ? '<p style="color: var(--green);">&#x2713; API key configured (in .env file)</p>'
       : '<p style="color: var(--red);">&#x2717; No API key. Add ANTHROPIC_API_KEY to app/.env</p>';
 
-    const queriesArea = document.getElementById('input-search-queries');
-    if (queriesArea && settings.searchQueries) {
-      queriesArea.value = settings.searchQueries.map(q => {
-        const parts = [q.query];
-        if (q.location) parts.push(q.location);
-        if (q.sources?.length) parts.push(q.sources.join(', '));
-        return parts.join(' | ');
-      }).join('\n');
+    // Load structured search config
+    const config = settings.searchConfig;
+    if (config) {
+      tagInputs.titles?.setValue(config.titles?.values || []);
+      tagInputs.industries?.setValue(config.industries?.values || []);
+      tagInputs.domains?.setValue(config.domains?.values || []);
+      tagInputs.locations?.setValue(config.locations || []);
+
+      const setSlider = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.value = val ?? 2;
+      };
+      setSlider('settings-titles-flex', config.titles?.flexibility);
+      setSlider('settings-industries-flex', config.industries?.flexibility);
+      setSlider('settings-domains-flex', config.domains?.flexibility);
+
+      // Update flex labels
+      ['settings-titles-flex-label', 'settings-industries-flex-label', 'settings-domains-flex-label'].forEach((labelId, i) => {
+        const flexIds = ['settings-titles-flex', 'settings-industries-flex', 'settings-domains-flex'];
+        const slider = document.getElementById(flexIds[i]);
+        const label = document.getElementById(labelId);
+        if (slider && label) label.textContent = FLEX_LABELS[slider.value] || 'Medium';
+      });
+
+      // Levels
+      (config.levels || []).forEach(l => {
+        const cb = document.querySelector(`[name="settings-levels"][value="${l}"]`);
+        if (cb) cb.checked = true;
+      });
+
+      // Company size
+      (config.companySize || []).forEach(s => {
+        const cb = document.querySelector(`[name="settings-company-size"][value="${s}"]`);
+        if (cb) cb.checked = true;
+      });
+    }
+
+    // Show generated queries
+    const queriesEl = document.getElementById('generated-queries');
+    if (settings.searchQueries?.length) {
+      queriesEl.innerHTML = settings.searchQueries.map(q =>
+        `<div class="settings-query-item"><code>${escapeHtml(q.query)}</code> <span class="text-muted">${escapeHtml(q.location || '')} · ${(q.sources || []).join(', ')}</span></div>`
+      ).join('');
+    } else {
+      queriesEl.innerHTML = '<p class="text-muted">No queries generated yet. Save your search config above.</p>';
     }
 
     const promptsInfo = document.getElementById('prompts-info');
@@ -180,6 +334,12 @@ async function loadSettingsUI() {
   } catch (err) {
     console.error('Failed to load settings:', err);
   }
+}
+
+function escapeHtml(str) {
+  const el = document.createElement('span');
+  el.textContent = str || '';
+  return el.innerHTML;
 }
 
 async function loadFetchStatus() {
