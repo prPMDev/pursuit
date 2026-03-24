@@ -5,6 +5,7 @@ import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { fetchJobs } from './browser.js';
+import { SETUP_STEPS, buildSynthesisContext, extractJSON, extractProfileMarkdown } from './setup.js';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const ROOT = resolve(__dirname, '..');
@@ -36,6 +37,7 @@ async function ensureDataDirs() {
   await ensureDir(join(DATA, 'jobs'));
   await ensureDir(join(DATA, 'scans'));
   await ensureDir(join(DATA, 'evaluations'));
+  await ensureDir(join(DATA, 'references'));
 }
 
 async function readMarkdown(filepath) {
@@ -300,7 +302,21 @@ app.post('/api/scan', async (req, res) => {
     const scannerPrompt = await readMarkdown(SCANNER_PROMPT);
     if (!scannerPrompt) return res.status(500).json({ error: 'Scanner prompt not found' });
 
-    const userMessage = `## My Profile\n\n${profile}\n\n## Job Listings\n\n${listings}`;
+    // Load reference examples to calibrate the scanner
+    let referencesContext = '';
+    const refsDir = join(DATA, 'references');
+    const refFiles = await readdir(refsDir).catch(() => []);
+    if (refFiles.length > 0) {
+      const refParts = ['\n\n## Reference Examples (What I Love/Hate)\n\nUse these to calibrate your filtering — they show what "good" and "bad" look like for me specifically.\n'];
+      for (const file of refFiles.filter(f => f.endsWith('.md')).slice(0, 6)) {
+        const content = await readFile(join(refsDir, file), 'utf-8');
+        refParts.push(content);
+        refParts.push('---');
+      }
+      referencesContext = refParts.join('\n');
+    }
+
+    const userMessage = `## My Profile\n\n${profile}${referencesContext}\n\n## Job Listings\n\n${listings}`;
     const result = await callClaude(scannerPrompt, userMessage);
 
     // Write to data/scans/
@@ -395,6 +411,175 @@ app.put('/api/settings', async (req, res) => {
   Object.assign(settings, req.body);
   await saveSettings();
   res.json({ ok: true });
+});
+
+// --- Setup Flow ---
+
+// Get setup state (has the user completed setup?)
+app.get('/api/setup/status', async (req, res) => {
+  const profile = await readMarkdown(join(DATA, 'profile.md'));
+  const refs = await readdir(join(DATA, 'references')).catch(() => []);
+  const prefs = await readMarkdown(join(DATA, 'preferences.md'));
+
+  const hasProfile = profile && !profile.includes('Customize This Section') && !profile.includes('<!-- Example:');
+  const hasReferences = refs.filter(f => f.endsWith('.md')).length >= 2;
+  const hasPreferences = !!prefs;
+
+  res.json({
+    setupComplete: hasProfile && hasReferences,
+    hasProfile,
+    hasReferences,
+    referenceCount: refs.filter(f => f.endsWith('.md')).length,
+    hasPreferences,
+    steps: SETUP_STEPS.map(s => ({ id: s.id, action: s.action })),
+  });
+});
+
+// Chat endpoint for setup conversation
+app.post('/api/setup/chat', async (req, res) => {
+  try {
+    const { stepId, userMessage, conversationHistory } = req.body;
+
+    const step = SETUP_STEPS.find(s => s.id === stepId);
+    if (!step) return res.status(400).json({ error: 'Invalid step' });
+
+    let systemPrompt = step.systemPrompt;
+    let userMsg = userMessage;
+
+    // For synthesis step, build context from all previous conversations
+    if (step.action === 'synthesize') {
+      userMsg = buildSynthesisContext(conversationHistory || {});
+    }
+
+    const response = await callClaude(systemPrompt, userMsg);
+
+    // Extract any structured data from response
+    const extracted = extractJSON(response);
+
+    res.json({
+      response,
+      extracted,
+      stepId,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Save the synthesized profile from setup
+app.post('/api/setup/save-profile', async (req, res) => {
+  try {
+    const { profileText } = req.body;
+    if (!profileText) return res.status(400).json({ error: 'Profile text required' });
+
+    const profile = extractProfileMarkdown(profileText);
+    await writeFile(join(DATA, 'profile.md'), profile);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Save search queries from setup
+app.post('/api/setup/save-queries', async (req, res) => {
+  try {
+    const { queries } = req.body;
+    if (queries) {
+      settings.searchQueries = queries;
+      await saveSettings();
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// --- Reference Examples ---
+
+// Save a reference example (loved/hated/maybe)
+app.post('/api/references', async (req, res) => {
+  try {
+    const { type, listing, reasoning, extracted } = req.body;
+    if (!type || !listing) return res.status(400).json({ error: 'Type and listing required' });
+
+    const refsDir = join(DATA, 'references');
+    await ensureDir(refsDir);
+
+    const filename = `${type}-${datePrefix()}-${Date.now()}.md`;
+    const content = [
+      `# Reference: ${type.charAt(0).toUpperCase() + type.slice(1)}`,
+      ``,
+      `**Type:** ${type}`,
+      `**Date:** ${datePrefix()}`,
+      ``,
+      `## Job Listing`,
+      ``,
+      listing,
+      ``,
+      `## Why I ${type === 'loved' ? 'Love' : type === 'hated' ? 'Hate' : 'Am Torn On'} This`,
+      ``,
+      reasoning || '',
+      ``,
+      extracted ? `## Extracted Signals\n\n\`\`\`json\n${JSON.stringify(extracted, null, 2)}\n\`\`\`` : '',
+    ].join('\n');
+
+    await writeFile(join(refsDir, filename), content);
+    res.json({ ok: true, filename });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// List reference examples
+app.get('/api/references', async (req, res) => {
+  try {
+    const refsDir = join(DATA, 'references');
+    const files = await readdir(refsDir).catch(() => []);
+    const refs = [];
+
+    for (const file of files.filter(f => f.endsWith('.md'))) {
+      const content = await readFile(join(refsDir, file), 'utf-8');
+      const typeMatch = file.match(/^(loved|hated|maybe)/);
+      refs.push({
+        filename: file,
+        type: typeMatch ? typeMatch[1] : 'unknown',
+        preview: content.substring(0, 200),
+      });
+    }
+
+    res.json({ references: refs });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// --- User Preferences ---
+
+app.get('/api/preferences', async (req, res) => {
+  const content = await readMarkdown(join(DATA, 'preferences.md'));
+  if (!content) {
+    // Return defaults
+    return res.json({
+      content: null,
+      defaults: {
+        fetchTime: '08:00',
+        maxFetchesPerDay: 3,
+        notificationStyle: 'nudge',
+        theme: 'light',
+      },
+    });
+  }
+  res.json({ content });
+});
+
+app.put('/api/preferences', async (req, res) => {
+  try {
+    const { content } = req.body;
+    await writeFile(join(DATA, 'preferences.md'), content);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Manual job input (paste listings without scanning)

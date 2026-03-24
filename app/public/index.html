@@ -168,6 +168,24 @@
     </div>
   </div>
 
+  <!-- Setup Overlay (first-time flow) -->
+  <div class="setup-overlay" id="setup-overlay" style="display:none;">
+    <div class="setup-container">
+      <div class="setup-header">
+        <h2>Pursuit Setup</h2>
+        <span class="setup-progress" id="setup-progress">Step 1 of 9</span>
+      </div>
+      <div class="setup-chat" id="setup-chat"></div>
+      <div class="setup-input-area">
+        <textarea id="setup-input" rows="4" placeholder="Type your response..." style="display:none;"></textarea>
+        <div class="setup-actions">
+          <button class="btn btn-primary" id="setup-send" style="display:none;">Send</button>
+          <button class="btn btn-primary" id="setup-next" style="display:none;">Let's go</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Loading Overlay -->
   <div class="loading-overlay" id="loading" style="display:none;">
     <div class="loading-content">
