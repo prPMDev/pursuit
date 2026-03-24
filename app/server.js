@@ -4,7 +4,7 @@ import { readFile, writeFile, readdir, mkdir, access } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
-import { fetchJobs } from './browser.js';
+import { fetchJobs, findChromeExecutable, findChromeProfile } from './browser.js';
 import { SETUP_STEPS, buildSynthesisContext, extractJSON, extractProfileMarkdown } from './setup.js';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
@@ -25,6 +25,12 @@ const API_KEY = process.env.ANTHROPIC_API_KEY;
 let settings = {
   searchQueries: [],
   lastFetchTime: null,
+};
+
+// System check results (populated at startup, re-checked on fetch failure)
+let systemChecks = {
+  chromePath: null,
+  chromeProfilePath: null,
 };
 
 // --- Helpers ---
@@ -218,6 +224,8 @@ function extractTags(job, profileText) {
 app.get('/api/health', (req, res) => {
   res.json({
     apiKeyConfigured: !!(API_KEY && API_KEY !== 'sk-ant-your-key-here'),
+    chromeFound: !!systemChecks.chromePath,
+    chromeProfileFound: !!systemChecks.chromeProfilePath,
     dataDir: DATA,
   });
 });
@@ -841,15 +849,29 @@ app.post('/api/fetch-and-scan', async (req, res) => {
 
 // --- Start ---
 
+function runSystemChecks() {
+  systemChecks.chromePath = findChromeExecutable();
+  systemChecks.chromeProfilePath = findChromeProfile();
+}
+
 async function start() {
   await ensureDataDirs();
   await loadSettings();
+  runSystemChecks();
 
   app.listen(PORT, () => {
     console.log(`\n  Pursuit Dashboard running at http://localhost:${PORT}\n`);
     if (!API_KEY || API_KEY === 'sk-ant-your-key-here') {
-      console.log('  ⚠  No API key configured. Copy .env.example to .env and add your Anthropic key.\n');
+      console.log('  ⚠  No API key configured. Copy .env.example to .env and add your Anthropic key.');
     }
+    if (!systemChecks.chromePath) {
+      console.log('  ⚠  Chrome/Chromium not found. Fetch Jobs will not work.');
+      console.log('    Install Chrome or set CHROME_PATH in .env.');
+    }
+    if (!systemChecks.chromeProfilePath) {
+      console.log('  ⚠  No Chrome profile found. Fetch will use a temporary profile (no saved logins).');
+    }
+    console.log('');
   });
 }
 

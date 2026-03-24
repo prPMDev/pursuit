@@ -1,127 +1,123 @@
 # Pursuit
 
-**Personalized job search. Quality over volume. Fit over desperation.**
+**Job search dashboard. Quality over volume. Fit over desperation.**
 
-An end-to-end job search system built around a simple philosophy: **Stop mass-applying. Start pursuing strategically.**
-
----
-
-## The Problem
-
-You see a job posting. It looks interesting. You bookmark it, thinking you'll spend an hour tailoring your resume later.
-
-You never do.
-
-Or worse: You spend 10-15 minutes per job just to figure out if you're even qualified, whether it's a good fit, what your story would be. That guilt-driven rabbit hole of scrolling through the JD, cross-referencing your resume, wondering "should I apply?"
-
-**Most "AI job tools" make this worse.** They promise to mass-apply for you — throwing your resume at 100 jobs with one click. That's not intelligence. That's spam.
+Pursuit is a local-first tool that finds the 3-5 jobs worth your time — not 500 to spray at. It uses Claude to filter job listings against your professional identity, not keywords.
 
 ---
 
-## The Philosophy
+## Prerequisites
 
-**Pursuit is anti-mass-apply.**
+- **Node.js 18+**
+- **Anthropic API key** — [console.anthropic.com](https://console.anthropic.com/)
+- **Chrome or Chromium** — required for auto-fetching jobs from LinkedIn/Indeed (optional if you paste listings manually)
 
-This system is built for people who:
-- Want to apply to **fewer jobs, better matched**
-- Need to **understand fit before wasting time**
-- Believe in **personalized positioning, not generic resumes**
-- Value **strategic pursuit over desperate volume**
+## Setup
 
-If you're trying to "spray and pray" 500 applications, this isn't for you. If you want to pursue 20 opportunities with intention and clarity, keep reading.
+```bash
+cd app
+npm install
+cp .env.example .env
+# Edit .env — add your ANTHROPIC_API_KEY
+npm start
+```
 
----
+Open [http://localhost:3000](http://localhost:3000). On first run, Pursuit walks you through a 5-minute setup conversation to build your professional profile and calibrate the scanner.
 
-## The System (End-to-End Vision)
+### Chrome login (for auto-fetch)
 
-Pursuit is designed to handle the full job search lifecycle:
+If you want Pursuit to browse LinkedIn/Indeed for you:
 
-### 1. **Scanner** (Current - Working)
-Personalized job shortlisting. Create your professional profile, paste a batch of listings, get back only the ones worth your time. Not keyword matching — identity matching.
+```bash
+npm run login
+```
 
-**Status:** ✅ Profile + prompt + formatter script. See [`scanner/`](scanner/).
+This opens a visible Chrome window. Log into LinkedIn and Indeed, then close the browser. Your session cookies are saved in your Chrome profile — Pursuit uses your existing logged-in session, not your credentials.
 
-### 2. **Evaluator** (Current - Working)
-Instant fit analysis. Paste a JD, get:
-- Match percentage (structural fit, not domain obsession)
-- Strongest stories from your background
-- Gaps and how to bridge them
-- Resume positioning recommendations
-- Decision: Pursue, Maybe, or Pass
-
-**Status:** ✅ Prompt built and tested. See [`evaluator/`](evaluator/).
-
-### 3. **Strategist** (Future)
-Once you decide to pursue: Build your application strategy.
-- Referral pathways
-- Custom resume positioning
-- Cover letter angles
-- Interview prep head start
-
-### 4. **Tracking** (Future)
-Job opportunity tracking and follow-through system. Never lose track of what you applied for, who you contacted, what happened.
+**Note:** Chrome must be closed when Pursuit fetches. Puppeteer can't share a profile with a running Chrome instance. If Chrome is open, it falls back to a temporary profile (no saved logins).
 
 ---
 
-## Current State
+## How it works
 
-**Working:** Scanner (see [`scanner/`](scanner/)) + Job Evaluator (see [`evaluator/`](evaluator/))
+### 1. Build your profile (one-time setup)
 
-**Planned:** Strategist, Tracking system
+A conversational flow asks about your background, logistics, and non-negotiables. You paste 3 example listings (one you love, one you hate, one you're torn on) to calibrate the scanner. Result: a professional profile in `data/profile.md` and reference examples in `data/references/`.
 
-This is a public work-in-progress. The evaluator works today. The rest will unfold over time.
+### 2. Get listings
 
----
+Two ways:
+- **Fetch Jobs** — Puppeteer opens Chrome with your logged-in session, browses LinkedIn/Indeed using your configured search queries, scrapes job cards + JD summaries. Capped at 3 fetches/day.
+- **Add Jobs** — Paste listings manually from any source. No Chrome needed.
 
-## How to Use (Today)
+### 3. Scan
 
-1. Go to [`evaluator/prompt.md`](evaluator/prompt.md)
-2. Copy the prompt framework
-3. Use it with Claude (claude.ai or Claude in Chrome)
-4. Paste a job description
-5. Get instant fit analysis and positioning strategy
+Claude reads your profile + reference examples + the batch of listings and filters each one:
+- **EVALUATE** — worth 5 more minutes of your time
+- **MAYBE** — borderline, worth a second look
+- **SKIP** — filtered out
 
-See [`evaluator/examples/`](evaluator/examples/) for real examples.
+Each job gets a narrative explanation ("this is your integrations story applied to healthcare") plus risk tagging (Safe Play vs Stretch).
 
----
+### 4. Evaluate (on-demand)
 
-## Philosophy in Practice
+Click any job and run the evaluator for deep analysis: match type, level fit, red flags, and a PURSUE/MAYBE/PASS decision with reasoning.
 
-- **60-70% fit is strong.** You don't need 90%+ to apply.
-- **Structural skills transfer.** Domain can be learned. Transferable skills matter more.
-- **Stories > keywords.** Your background tells a story. The evaluator finds it.
-- **Apply with intent.** Not mass. Not desperation. Strategic pursuit.
+### 5. Decide and track
 
----
-
-## Contributing
-
-This system is built in public. If this philosophy resonates, contribute:
-- Share your own evaluation examples
-- Suggest improvements to the prompt
-- Build scanner/strategist/tracking modules
-- Document your job search workflow
-
-See [`CONTRIBUTING.md`](CONTRIBUTING.md) for guidelines.
+Pursue, Pass, or Save each job. Track through Applied → Interview → Offered/Rejected. Decisions are logged to `data/decisions.md`.
 
 ---
 
-## Why "Pursuit"?
+## Project structure
 
-Because job searching isn't about **applying**. It's about **pursuing**.
+```
+app/
+  server.js          Express server + API routes
+  browser.js         Puppeteer job scraper (LinkedIn, Indeed)
+  setup.js           Conversational setup flow definitions
+  public/            Frontend (vanilla JS, no build step)
+    index.html       HTML shell
+    styles.css       Design system
+    js/              Modular JS (app, job-list, job-detail, etc.)
 
-You don't spray resumes and hope. You identify fit, position strategically, and pursue with intention.
+scanner/
+  scanner-prompt.md  Scanner system prompt
+  my-profile-template.md  Profile template
 
-That's what this system enables.
+evaluator/
+  HLL-job-eval-prompt.md  Evaluator system prompt
+
+data/                Local data (gitignored except structure)
+  profile.md         Your professional profile
+  settings.json      Search queries + fetch history
+  jobs/              Raw fetched listings (markdown)
+  scans/             Scanner output (parsed into job list)
+  evaluations/       Evaluator results (one per job)
+  references/        Reference examples for calibration
+  decisions.md       Decision log
+```
+
+## System checks
+
+On startup, Pursuit checks:
+- **API key** — required for scan/evaluate. Shown in topbar if missing.
+- **Chrome binary** — required for Fetch Jobs. If not found, Fetch is disabled but Add Jobs + Scan still work.
+- **Chrome profile** — if not found, fetches use a temporary profile (no saved logins).
+
+These are checked once at startup and exposed at `/api/health`. No polling or periodic pings — re-checked on failure.
+
+---
+
+## Philosophy
+
+- **Anti-mass-apply.** 3 fetches/day, not 300. The nudges are intentional.
+- **Identity over keywords.** "Integrations PM" and "Platform Partnerships" might be the same role for the same person.
+- **Adjacent is OK.** Structural skills transfer across domains.
+- **Local-first.** Your data stays on your machine. No accounts, no cloud, no tracking.
 
 ---
 
 ## License
 
-MIT License. Use it, fork it, improve it.
-
----
-
-**Built by someone who got tired of the guilt-driven job search rabbit hole.**
-
-**Maintained by anyone who believes quality > volume.**
+MIT

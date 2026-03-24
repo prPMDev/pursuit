@@ -115,8 +115,18 @@ async function init() {
   // Phase 2: Check health
   try {
     const health = await api('/health');
+    const fetchBtn = document.getElementById('btn-fetch-now');
+    const statusEl = document.getElementById('fetch-status');
+
     if (!health.apiKeyConfigured) {
-      document.getElementById('fetch-status').textContent = '\u26A0 No API key';
+      statusEl.textContent = '\u26A0 No API key — add to app/.env';
+    } else if (!health.chromeFound) {
+      statusEl.textContent = '\u26A0 No Chrome found';
+      if (fetchBtn) {
+        fetchBtn.disabled = true;
+        fetchBtn.style.opacity = '0.5';
+        fetchBtn.title = 'Chrome/Chromium not installed. Install it or set CHROME_PATH in .env. Add Jobs still works.';
+      }
     }
   } catch (err) {
     console.error('Health check failed:', err);
