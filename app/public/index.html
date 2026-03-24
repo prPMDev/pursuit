@@ -15,7 +15,8 @@
     </div>
     <div class="topbar-actions">
       <span class="fetch-status" id="fetch-status"></span>
-      <button class="btn btn-sm" id="btn-add-jobs" title="Paste job listings">+ Add Jobs</button>
+      <button class="btn btn-sm" id="btn-fetch-now" title="Browse job boards with Puppeteer">Fetch Jobs</button>
+      <button class="btn btn-sm" id="btn-add-jobs" title="Paste job listings manually">+ Add Jobs</button>
       <button class="btn btn-sm btn-primary" id="btn-scan" title="Scan unscanned jobs">Scan</button>
       <button class="btn btn-icon" id="btn-profile" title="Profile">&#x1f464;</button>
       <button class="btn btn-icon" id="btn-settings" title="Settings">&#x2699;</button>
@@ -139,6 +140,15 @@
       <div class="settings-section">
         <h4>API Key</h4>
         <div id="api-key-status"></div>
+      </div>
+      <div class="settings-section">
+        <h4>Search Queries (for Fetch Jobs)</h4>
+        <p class="modal-hint">One per line. Format: <code>query | location | sources</code><br>
+          Example: <code>Senior PM Integrations | Remote | linkedin, indeed</code></p>
+        <textarea id="input-search-queries" rows="4" placeholder="Senior Product Manager | Remote | linkedin, indeed"></textarea>
+        <div style="margin-top: 6px;">
+          <button class="btn btn-sm btn-primary" id="btn-save-queries">Save Queries</button>
+        </div>
       </div>
       <div class="settings-section">
         <h4>Prompts in Use</h4>

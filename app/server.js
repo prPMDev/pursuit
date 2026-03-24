@@ -4,6 +4,7 @@ import { readFile, writeFile, readdir, mkdir, access } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
+import { fetchJobs } from './browser.js';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const ROOT = resolve(__dirname, '..');
@@ -406,6 +407,114 @@ app.post('/api/jobs/manual', async (req, res) => {
     await writeFile(join(DATA, 'jobs', filename), listings);
     res.json({ ok: true, filename });
   } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Fetch — trigger Puppeteer to browse job boards
+let fetchInProgress = false;
+
+app.post('/api/fetch', async (req, res) => {
+  if (fetchInProgress) {
+    return res.status(409).json({ error: 'Fetch already in progress' });
+  }
+
+  const searchQueries = settings.searchQueries || [];
+  if (searchQueries.length === 0) {
+    return res.status(400).json({
+      error: 'No search queries configured. Add them in Settings.',
+    });
+  }
+
+  fetchInProgress = true;
+  settings.lastFetchTime = new Date().toISOString();
+  await saveSettings();
+
+  try {
+    const result = await fetchJobs(searchQueries, {
+      dataDir: DATA,
+      headless: true,
+      maxPages: 3,
+      getSummaries: false,
+    });
+
+    fetchInProgress = false;
+    res.json({
+      ok: true,
+      totalFetched: result.totalFetched,
+      files: result.files,
+    });
+  } catch (err) {
+    fetchInProgress = false;
+    res.status(500).json({ error: `Fetch failed: ${err.message}` });
+  }
+});
+
+// Fetch + Scan — fetch jobs then immediately scan them
+app.post('/api/fetch-and-scan', async (req, res) => {
+  if (fetchInProgress) {
+    return res.status(409).json({ error: 'Fetch already in progress' });
+  }
+
+  const searchQueries = settings.searchQueries || [];
+  if (searchQueries.length === 0) {
+    return res.status(400).json({
+      error: 'No search queries configured. Add them in Settings.',
+    });
+  }
+
+  fetchInProgress = true;
+  settings.lastFetchTime = new Date().toISOString();
+  await saveSettings();
+
+  try {
+    // Step 1: Fetch jobs
+    const result = await fetchJobs(searchQueries, {
+      dataDir: DATA,
+      headless: true,
+      maxPages: 3,
+      getSummaries: false,
+    });
+
+    fetchInProgress = false;
+
+    if (result.totalFetched === 0) {
+      return res.json({ ok: true, totalFetched: 0, message: 'No new jobs found.' });
+    }
+
+    // Step 2: Read the fetched jobs and scan them
+    let allListings = '';
+    for (const file of result.files) {
+      const content = await readFile(join(DATA, 'jobs', file), 'utf-8');
+      allListings += content + '\n\n';
+    }
+
+    const profile = await readMarkdown(join(DATA, 'profile.md'));
+    if (!profile) {
+      return res.json({
+        ok: true,
+        totalFetched: result.totalFetched,
+        message: 'Jobs fetched but not scanned — no profile set.',
+        files: result.files,
+      });
+    }
+
+    const scannerPrompt = await readMarkdown(SCANNER_PROMPT);
+    const userMessage = `## My Profile\n\n${profile}\n\n## Job Listings\n\n${allListings}`;
+    const scanResult = await callClaude(scannerPrompt, userMessage);
+
+    const scanFilename = `${datePrefix()}-auto-scan.md`;
+    await writeFile(join(DATA, 'scans', scanFilename), scanResult);
+
+    const parsed = parseScannerOutput(scanResult);
+    res.json({
+      ok: true,
+      totalFetched: result.totalFetched,
+      scanFile: scanFilename,
+      ...parsed,
+    });
+  } catch (err) {
+    fetchInProgress = false;
     res.status(500).json({ error: err.message });
   }
 });
