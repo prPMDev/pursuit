@@ -1,0 +1,9 @@
+# Pursuit Scanner — Python Dependencies
+# Install: pip install -r requirements.txt
+
+# No dependencies required for MVP (formatter.py uses stdlib only)
+
+# Future enhancements will need:
+# feedparser>=6.0        # RSS feed monitoring (rss_monitor.py)
+# pyyaml>=6.0            # Config file parsing
+# beautifulsoup4>=4.12   # Email HTML parsing (email_parser.py)

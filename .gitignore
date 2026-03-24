@@ -1,6 +1,10 @@
 # Personal customizations
 prompt-custom.md
 my-background.md
+my-profile.md
+scanner/my-profile.md
+config.yaml
+scanner/scripts/config.yaml
 CLAUDE.md
 claude.md
 .claude/
