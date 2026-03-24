@@ -82,7 +82,6 @@ export function renderSetupOverlay() {
 }
 
 export async function checkSetupNeeded() {
-  if (!health.apiKeyConfigured) return false; // Setup needs Claude — skip without key
   try {
     const status = await api('/setup/status');
     return !status.setupComplete;
@@ -94,6 +93,31 @@ export async function checkSetupNeeded() {
 export function showSetup() {
   document.getElementById('setup-overlay').classList.remove('hidden');
   currentStepIndex = 0;
+
+  if (!health.apiKeyConfigured) {
+    // Show setup with API key warning — can still browse, configure, fetch
+    addMessage('assistant', STEP_PROMPTS.welcome);
+    addMessage('assistant',
+      'Note: No API key found. The guided setup needs Claude to build your profile through conversation.\n\n' +
+      'You can still:\n' +
+      '- Edit your profile manually (click Profile in the top bar)\n' +
+      '- Configure search queries (click Settings)\n' +
+      '- Fetch and collect job listings\n' +
+      '- Add jobs by pasting them\n\n' +
+      'To unlock scanning, evaluation, and this guided setup, add your ANTHROPIC_API_KEY to app/.env and restart.'
+    );
+    const nextBtn = document.getElementById('setup-next');
+    nextBtn.classList.remove('hidden');
+    nextBtn.textContent = 'Got it — I\'ll set up manually';
+
+    // Override advanceStep to just close
+    nextBtn.onclick = () => {
+      hideSetup();
+      nextBtn.onclick = null;
+    };
+    return;
+  }
+
   renderStep();
 }
 

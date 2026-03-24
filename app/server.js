@@ -303,6 +303,26 @@ app.get('/api/jobs', async (req, res) => {
       }
     }
 
+    // Include raw fetched jobs that haven't been scanned yet
+    const scannedIds = new Set(allJobs.map(j => j.id));
+    for (const [id, raw] of Object.entries(rawJobIndex)) {
+      if (scannedIds.has(id)) continue;
+      allJobs.push({
+        id,
+        company: raw.company,
+        role: raw.title,
+        location: raw.location || '',
+        link: raw.link || '',
+        summary: raw.summary || '',
+        source: raw.source || '',
+        posted: raw.posted || '',
+        date: '',
+        action: '',
+        tags: [],
+        hasEvaluation: false,
+      });
+    }
+
     res.json({ jobs: allJobs });
   } catch (err) {
     res.status(500).json({ error: err.message });

@@ -138,10 +138,10 @@ async function init() {
 
     if (!health.apiKeyConfigured) {
       statusEl.textContent = '\u26A0 No API key — add to app/.env';
-      disableBtn(fetchBtn, 'API key required. Add ANTHROPIC_API_KEY to app/.env');
       disableBtn(scanBtn, 'API key required. Add ANTHROPIC_API_KEY to app/.env');
-    } else if (!health.chromeFound) {
-      statusEl.textContent = '\u26A0 No Chrome found';
+    }
+    if (!health.chromeFound) {
+      if (!statusEl.textContent) statusEl.textContent = '\u26A0 No Chrome found';
       disableBtn(fetchBtn, 'Chrome/Chromium not installed. Install it or set CHROME_PATH in .env. Add Jobs still works.');
     }
   } catch (err) {

@@ -1,5 +1,5 @@
 // Pursuit Dashboard — Settings panel
-import { api, showLoading, hideLoading } from './app.js';
+import { api, showLoading, hideLoading, health } from './app.js';
 import { showModal, hideModal } from './modal.js';
 import { refreshJobList } from './job-list.js';
 import { html } from './util.js';
@@ -98,15 +98,18 @@ export function initSettings() {
       updateFetchCounter(status.remaining);
     } catch { /* proceed anyway */ }
 
-    showLoading('Browsing job boards...');
+    // With API key: fetch + scan. Without: fetch only (collect jobs for later).
+    const endpoint = health.apiKeyConfigured ? '/fetch-and-scan' : '/fetch';
+    showLoading(health.apiKeyConfigured ? 'Browsing job boards...' : 'Collecting listings (no API key — scan later)...');
     try {
-      const result = await api('/fetch-and-scan', { method: 'POST' });
+      const result = await api(endpoint, { method: 'POST' });
       hideLoading();
 
       if (result.totalFetched === 0) {
         updateFetchStatus('No new jobs found');
       } else {
-        updateFetchStatus(`Found ${result.totalFetched} new jobs`);
+        const suffix = health.apiKeyConfigured ? '' : ' (unscanned)';
+        updateFetchStatus(`Found ${result.totalFetched} new jobs${suffix}`);
         await refreshJobList();
       }
 
