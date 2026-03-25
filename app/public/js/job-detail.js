@@ -124,11 +124,9 @@ export function showJobDetail(job) {
   // Risk
   const riskSection = document.getElementById('detail-risk-section');
   const riskEl = document.getElementById('detail-risk');
-  if (job.riskDetail) {
-    riskEl.textContent = job.riskDetail;
-    riskSection.style.display = 'block';
-  } else if (job.risk && job.risk !== '—') {
-    riskEl.textContent = job.risk;
+  if (job.riskDetail || (job.risk && job.risk !== '—')) {
+    riskEl.textContent = job.riskDetail || job.risk;
+    riskEl.className = 'risk-banner risk-' + (job.risk || '').toLowerCase();
     riskSection.style.display = 'block';
   } else {
     riskSection.style.display = 'none';

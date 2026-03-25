@@ -44,7 +44,7 @@
 
 body {
   font-family: var(--font);
-  font-size: 14px;
+  font-size: 15px;
   color: var(--text);
   background: var(--bg);
   height: 100vh;
@@ -52,6 +52,7 @@ body {
   flex-direction: column;
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
+  line-height: 1.5;
 }
 
 /* --- Icons (Lucide inline SVGs) --- */
@@ -141,7 +142,7 @@ body {
 .detail-panel {
   flex: 1;
   overflow-y: auto;
-  padding: 20px 24px;
+  padding: 28px 36px;
   background: var(--bg);
 }
 
@@ -183,7 +184,7 @@ body {
 }
 
 .job-card {
-  padding: 10px 12px;
+  padding: 12px 14px;
   border-bottom: 1px solid var(--border);
   cursor: pointer;
   transition: background 0.1s;
@@ -194,14 +195,14 @@ body {
 
 .job-card-company {
   font-weight: 600;
-  font-size: 13px;
-  margin-bottom: 2px;
+  font-size: 14px;
+  margin-bottom: 3px;
 }
 
 .job-card-role {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-muted);
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 }
 
 .job-card-meta {
@@ -273,20 +274,23 @@ body {
 }
 
 .detail-header {
-  margin-bottom: 20px;
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
 }
 
 .detail-header h2 {
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 700;
+  letter-spacing: -0.3px;
   margin-bottom: 4px;
 }
 
 .detail-header h3 {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 400;
-  color: var(--text-muted);
-  margin-bottom: 6px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
 }
 
 .detail-meta {
@@ -295,7 +299,7 @@ body {
 }
 
 .detail-section {
-  margin-bottom: 18px;
+  margin-bottom: 22px;
 }
 
 .detail-section h4 {
@@ -304,7 +308,7 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: var(--text-muted);
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 /* --- Tags --- */
@@ -312,13 +316,13 @@ body {
 .tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
-  margin-bottom: 8px;
+  gap: 6px;
+  margin-bottom: 10px;
 }
 
 .tag {
   display: inline-block;
-  padding: 2px 8px;
+  padding: 3px 10px;
   border-radius: 12px;
   font-size: 11px;
   font-weight: 500;
@@ -331,13 +335,46 @@ body {
 .tag.gray { background: var(--gray-bg); color: var(--gray); }
 
 .narrative {
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: 14px;
+  line-height: 1.7;
   color: var(--text-secondary);
   background: var(--bg-subtle);
   border-left: 3px solid var(--border);
-  padding: 10px 14px;
+  padding: 12px 16px;
   border-radius: 0 var(--radius) var(--radius) 0;
+}
+
+/* --- Risk Banner --- */
+
+.risk-banner {
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  font-size: 13px;
+  line-height: 1.5;
+  background: var(--amber-bg);
+  color: var(--amber);
+  border: 1px solid var(--amber-border);
+}
+
+.risk-banner.risk-safe {
+  background: var(--green-bg);
+  color: var(--green);
+  border-color: var(--green-border);
+}
+
+.risk-banner.risk-stretch {
+  background: var(--amber-bg);
+  color: var(--amber);
+  border-color: var(--amber-border);
+}
+
+/* --- Evaluator Card --- */
+
+#detail-evaluator .eval-result {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
 }
 
 /* --- Buttons --- */
@@ -378,7 +415,8 @@ body {
 
 .action-buttons {
   display: flex;
-  gap: 8px;
+  gap: 10px;
+  padding-top: 4px;
 }
 
 /* --- Pipeline (post-decision status tracking) --- */
