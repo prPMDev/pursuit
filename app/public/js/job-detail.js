@@ -1,6 +1,6 @@
 // Pursuit Dashboard — Job Detail (right panel)
 import { api, showLoading, hideLoading, injectIcons } from './app.js';
-import { icon, statusBadge } from './icons.js';
+import { statusBadge } from './icons.js';
 import { refreshJobList } from './job-list.js';
 
 let currentJob = null;
@@ -86,9 +86,18 @@ export function showJobDetail(job) {
   document.getElementById('detail-empty').style.display = 'none';
   document.getElementById('detail-content').style.display = 'block';
 
-  // Reset decision/pipeline state
-  document.getElementById('action-initial').style.display = 'flex';
-  document.getElementById('action-pipeline').style.display = 'none';
+  // Restore decision/pipeline state
+  if (job.decision) {
+    const statusMap = {
+      'PURSUING': 'saved', 'SAVED': 'saved', 'PASS': 'passed',
+      'APPLIED': 'applied', 'INTERVIEW': 'interview',
+      'OFFERED': 'offered', 'REJECTED': 'rejected',
+    };
+    showPipeline(statusMap[job.decision] || 'saved');
+  } else {
+    document.getElementById('action-initial').style.display = 'flex';
+    document.getElementById('action-pipeline').style.display = 'none';
+  }
 
   // Inject icons in action buttons
   injectIcons(document.getElementById('detail-actions-section'));

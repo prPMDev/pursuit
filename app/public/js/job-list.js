@@ -35,6 +35,10 @@ function renderJobList() {
 
   const filtered = currentFilter === 'all'
     ? allJobs
+    : currentFilter === 'pursuing'
+    ? allJobs.filter(j => j.decision && ['PURSUING', 'SAVED'].includes(j.decision))
+    : currentFilter === 'applied'
+    ? allJobs.filter(j => j.decision && ['APPLIED', 'INTERVIEW', 'OFFERED'].includes(j.decision))
     : allJobs.filter(j => j.action === currentFilter);
 
   if (filtered.length === 0) {
