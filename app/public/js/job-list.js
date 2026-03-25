@@ -1,5 +1,6 @@
 // Pursuit Dashboard — Job List (left panel)
-import { api } from './app.js';
+import { api, injectIcons } from './app.js';
+import { icon } from './icons.js';
 import { showJobDetail } from './job-detail.js';
 
 let allJobs = [];
@@ -34,6 +35,10 @@ function renderJobList() {
 
   const filtered = currentFilter === 'all'
     ? allJobs
+    : currentFilter === 'pursuing'
+    ? allJobs.filter(j => j.decision && ['PURSUING', 'SAVED'].includes(j.decision))
+    : currentFilter === 'applied'
+    ? allJobs.filter(j => j.decision && ['APPLIED', 'INTERVIEW', 'OFFERED'].includes(j.decision))
     : allJobs.filter(j => j.action === currentFilter);
 
   if (filtered.length === 0) {
@@ -46,8 +51,15 @@ function renderJobList() {
   emptyState.style.display = 'none';
 
   container.innerHTML = filtered.map(job => {
-    const actionClass = (job.action || 'unscanned').toLowerCase();
+    const action = (job.action || 'unscanned').toLowerCase();
     const isActive = job.id === selectedJobId;
+
+    // Icon + color for action status
+    const statusIcon = action === 'evaluate' ? icon('check-circle', 14, 'status-icon-green')
+      : action === 'maybe' ? icon('help-circle', 14, 'status-icon-amber')
+      : action === 'skip' ? icon('x-circle', 14, 'status-icon-gray')
+      : icon('circle-dot', 14, 'status-icon-light');
+
     const riskBadge = job.risk && job.risk !== '—'
       ? `<span class="risk-badge ${job.risk.toLowerCase()}">${job.risk}</span>`
       : '';
@@ -57,7 +69,7 @@ function renderJobList() {
         <div class="job-card-company">${escapeHtml(job.company)}</div>
         <div class="job-card-role">${escapeHtml(job.role)}</div>
         <div class="job-card-meta">
-          <span class="status-dot ${actionClass}"></span>
+          ${statusIcon}
           <span>${job.action || 'Unscanned'}</span>
           ${riskBadge}
           <span class="job-card-source">${job.source || ''} · ${job.date || ''}</span>

@@ -213,12 +213,30 @@ app.put('/api/profile', async (req, res) => {
   res.json({ ok: true });
 });
 
+// Parse decisions.md into a map of jobId -> latest decision
+async function getDecisionMap() {
+  const content = await readMarkdown(join(DATA, 'decisions.md'));
+  const map = {};
+  if (!content) return map;
+  const lines = content.split('\n').filter(l => l.startsWith('|') && !l.startsWith('| Date') && !l.startsWith('|---'));
+  for (const line of lines) {
+    const cols = line.split('|').map(c => c.trim()).filter(Boolean);
+    if (cols.length >= 5) {
+      const [, company, role, , decision] = cols;
+      const id = jobId(company, role);
+      map[id] = decision;
+    }
+  }
+  return map;
+}
+
 // Jobs — list all jobs from scans
 app.get('/api/jobs', async (req, res) => {
   try {
     const scanDir = join(DATA, 'scans');
     const files = await readdir(scanDir).catch(() => []);
     const allJobs = [];
+    const decisionMap = await getDecisionMap();
 
     for (const file of files.filter(f => f.endsWith('.md'))) {
       const content = await readFile(join(scanDir, file), 'utf-8');
@@ -237,6 +255,7 @@ app.get('/api/jobs', async (req, res) => {
         const evalFile = evalFiles.find(f => f.includes(job.id));
         job.hasEvaluation = !!evalFile;
         job.evalFile = evalFile || null;
+        job.decision = decisionMap[job.id] || null;
 
         allJobs.push(job);
       }

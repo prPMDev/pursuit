@@ -1,5 +1,6 @@
 // Pursuit Dashboard — Job Detail (right panel)
-import { api, showLoading, hideLoading } from './app.js';
+import { api, showLoading, hideLoading, injectIcons } from './app.js';
+import { statusBadge } from './icons.js';
 import { refreshJobList } from './job-list.js';
 
 let currentJob = null;
@@ -27,9 +28,56 @@ export function initJobDetail() {
   });
 
   // Decision buttons
-  document.getElementById('btn-pursue').addEventListener('click', () => logDecision('PURSUING'));
-  document.getElementById('btn-pass').addEventListener('click', () => logDecision('PASS'));
-  document.getElementById('btn-save-later').addEventListener('click', () => logDecision('SAVED'));
+  document.getElementById('btn-pursue').addEventListener('click', () => {
+    logDecision('PURSUING');
+    showPipeline('saved');
+  });
+  document.getElementById('btn-pass').addEventListener('click', () => {
+    logDecision('PASS');
+    showPipeline('passed');
+  });
+  document.getElementById('btn-save-later').addEventListener('click', () => {
+    logDecision('SAVED');
+    showPipeline('saved');
+  });
+
+  // Pipeline status buttons
+  document.getElementById('btn-mark-applied')?.addEventListener('click', () => updatePipelineStatus('applied'));
+  document.getElementById('btn-mark-interview')?.addEventListener('click', () => updatePipelineStatus('interview'));
+  document.getElementById('btn-mark-offered')?.addEventListener('click', () => updatePipelineStatus('offered'));
+  document.getElementById('btn-mark-rejected')?.addEventListener('click', () => updatePipelineStatus('rejected'));
+}
+
+function showPipeline(status) {
+  document.getElementById('action-initial').style.display = 'none';
+  document.getElementById('action-pipeline').style.display = 'block';
+  updatePipelineDisplay(status);
+  injectIcons(document.getElementById('action-pipeline'));
+}
+
+function updatePipelineDisplay(status) {
+  const container = document.getElementById('pipeline-status');
+  container.innerHTML = statusBadge(status);
+  if (currentJob) currentJob.pipelineStatus = status;
+}
+
+async function updatePipelineStatus(status) {
+  if (!currentJob) return;
+  updatePipelineDisplay(status);
+
+  try {
+    await api('/decisions', {
+      method: 'POST',
+      body: {
+        company: currentJob.company,
+        role: currentJob.role,
+        scannerAction: currentJob.action,
+        decision: status.toUpperCase(),
+      },
+    });
+  } catch (err) {
+    console.error('Failed to update status:', err);
+  }
 }
 
 export function showJobDetail(job) {
@@ -37,6 +85,22 @@ export function showJobDetail(job) {
 
   document.getElementById('detail-empty').style.display = 'none';
   document.getElementById('detail-content').style.display = 'block';
+
+  // Restore decision/pipeline state
+  if (job.decision) {
+    const statusMap = {
+      'PURSUING': 'saved', 'SAVED': 'saved', 'PASS': 'passed',
+      'APPLIED': 'applied', 'INTERVIEW': 'interview',
+      'OFFERED': 'offered', 'REJECTED': 'rejected',
+    };
+    showPipeline(statusMap[job.decision] || 'saved');
+  } else {
+    document.getElementById('action-initial').style.display = 'flex';
+    document.getElementById('action-pipeline').style.display = 'none';
+  }
+
+  // Inject icons in action buttons
+  injectIcons(document.getElementById('detail-actions-section'));
 
   // Header
   document.getElementById('detail-company').textContent = job.company || 'Unknown';

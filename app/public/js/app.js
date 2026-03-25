@@ -4,6 +4,18 @@ import { initJobDetail } from './job-detail.js';
 import { initProfile } from './profile.js';
 import { initSettings } from './settings.js';
 import { checkSetupNeeded, showSetup, initSetup } from './setup.js';
+import { icon } from './icons.js';
+
+// --- Icon Injection ---
+// Replace all [data-icon] elements with inline SVGs on load
+
+export function injectIcons(root = document) {
+  root.querySelectorAll('[data-icon]').forEach(el => {
+    const name = el.dataset.icon;
+    const size = el.dataset.iconSize || (el.closest('.empty-icon') ? 32 : 16);
+    el.innerHTML = icon(name, size);
+  });
+}
 
 // --- API Helpers ---
 
@@ -152,6 +164,7 @@ async function init() {
   initProfile();
   initSettings();
   initSetup();
+  injectIcons();
 
   // Check if first-time setup is needed
   const needsSetup = await checkSetupNeeded();
