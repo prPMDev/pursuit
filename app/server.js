@@ -167,7 +167,7 @@ function parseScannerOutput(markdown) {
     if (job) {
       const detail = match[3];
       const whyMatch = detail.match(/\*\*Why:\*\*\s*(.+?)(?:\n|$)/);
-      const riskMatch = detail.match(/\*\*Risk:\*\*\s*(.+?)(?:\n|$)/);
+      const riskMatch = detail.match(/\*\*Risk(?:\s*detail)?:\*\*\s*(.+?)(?:\n|$)/);
       const watchMatch = detail.match(/\*\*Watch for:\*\*\s*(.+?)(?:\n|$)/);
       const fenceMatch = detail.match(/\*\*On the fence because:\*\*\s*(.+?)(?:\n|$)/);
 
@@ -175,6 +175,21 @@ function parseScannerOutput(markdown) {
       if (riskMatch) job.riskDetail = riskMatch[1].trim();
       if (watchMatch) job.watchFor = watchMatch[1].trim();
       if (fenceMatch) job.narrative = fenceMatch[1].trim();
+
+      // Extract dossier profile context fields (new format)
+      const skillsMatch = detail.match(/[-•]\s*Matched skills:\s*(.+?)(?:\n|$)/);
+      const levelMatch = detail.match(/[-•]\s*Level context:\s*(.+?)(?:\n|$)/);
+      const riskNoteMatch = detail.match(/[-•]\s*Risk appetite note:\s*(.+?)(?:\n|$)/);
+      const redFlagMatch = detail.match(/[-•]\s*Red flags to check:\s*(.+?)(?:\n|$)/);
+
+      if (skillsMatch) job.matchedSkills = skillsMatch[1].trim();
+      if (levelMatch) job.levelContext = levelMatch[1].trim();
+      if (riskNoteMatch) job.riskAppetiteNote = riskNoteMatch[1].trim();
+      if (redFlagMatch) job.redFlagsToCheck = redFlagMatch[1].trim();
+
+      // Extract raw listing block if Scanner included it
+      const listingMatch = detail.match(/\*\*Raw listing:\*\*\s*\n([\s\S]+?)(?=\n###|\n---|\n\*\*|$)/);
+      if (listingMatch) job.rawListing = listingMatch[1].trim();
     }
   }
 
@@ -444,12 +459,23 @@ app.post('/api/scan', async (req, res) => {
           `- Watch for: ${job.watchFor || '—'}`,
           `- Narrative: ${job.narrative || '—'}`,
           job.riskDetail ? `- Risk detail: ${job.riskDetail}` : '',
+          job.matchedSkills ? `- Matched skills: ${job.matchedSkills}` : '',
+          job.levelContext ? `- Level context: ${job.levelContext}` : '',
+          job.riskAppetiteNote ? `- Risk appetite note: ${job.riskAppetiteNote}` : '',
+          job.redFlagsToCheck ? `- Red flags to check: ${job.redFlagsToCheck}` : '',
           '',
-          '## Profile Context',
-          `- Matched from profile scan on ${datePrefix()}`,
+          '## Job Details',
+          `- Source: ${job.source || '—'}`,
+          `- Date: ${job.date || '—'}`,
+          `- Location: ${job.location || '—'}`,
+          job.link ? `- Link: ${job.link}` : '',
+          job.salary ? `- Salary: ${job.salary}` : '',
+          job.jobType ? `- Type: ${job.jobType}` : '',
+          job.experienceLevel ? `- Level posted: ${job.experienceLevel}` : '',
+          job.companySize ? `- Company size: ${job.companySize}` : '',
           '',
-          '## Raw Listing',
-          job.rawListing || `Company: ${job.company}\nRole: ${job.role}\nSource: ${job.source || '—'}\nDate: ${job.date || '—'}`,
+          '## Full Listing',
+          job.fullDescription || job.summary || job.rawListing || `Company: ${job.company}\nRole: ${job.role}`,
         ].filter(Boolean).join('\n');
 
         await writeFile(join(DATA, 'scans', 'dossiers', `${slug}.md`), dossierContent);
@@ -887,7 +913,7 @@ app.post('/api/fetch', async (req, res) => {
       dataDir: DATA,
       headless: true,
       maxPages: 3,
-      getSummaries: false,
+      getSummaries: true,
     });
 
     fetchInProgress = false;

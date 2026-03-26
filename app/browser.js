@@ -257,9 +257,11 @@ async function getJobSummary(page, job) {
     await page.goto(job.link, { waitUntil: 'networkidle2', timeout: 20000 });
     await sleep(1500);
 
-    const summary = await page.evaluate(() => {
-      // Try common JD containers
-      const selectors = [
+    const details = await page.evaluate(() => {
+      const result = { summary: '', fullDescription: '', metadata: {} };
+
+      // --- Full JD text ---
+      const descSelectors = [
         '.show-more-less-html__markup',     // LinkedIn
         '#jobDescriptionText',               // Indeed
         '[class*="description"]',
@@ -267,21 +269,65 @@ async function getJobSummary(page, job) {
         'article',
       ];
 
-      for (const sel of selectors) {
+      for (const sel of descSelectors) {
         const el = document.querySelector(sel);
         if (el && el.textContent.trim().length > 50) {
-          // Get first ~500 chars as summary
           const text = el.textContent.trim();
           const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-          return lines.slice(0, 15).join('\n');
+          result.fullDescription = lines.join('\n');
+          result.summary = lines.slice(0, 15).join('\n');
+          break;
         }
       }
-      return '';
+
+      // --- Structured metadata from LinkedIn ---
+      // Salary
+      const salaryEl = document.querySelector('[class*="salary"], [class*="compensation"], .job-details-jobs-unified-top-card__job-insight--highlight');
+      if (salaryEl) result.metadata.salary = salaryEl.textContent.trim();
+
+      // Job type (Full-time, Contract, etc.)
+      const typeEls = document.querySelectorAll('.job-details-jobs-unified-top-card__job-insight, [class*="job-type"], .metadata [class*="type"]');
+      for (const el of typeEls) {
+        const text = el.textContent.trim();
+        if (/full.time|part.time|contract|intern|temporary/i.test(text)) {
+          result.metadata.jobType = text.replace(/\s+/g, ' ').trim();
+          break;
+        }
+      }
+
+      // Experience level
+      const expEls = document.querySelectorAll('[class*="experience"], .job-details-jobs-unified-top-card__job-insight');
+      for (const el of expEls) {
+        const text = el.textContent.trim();
+        if (/entry|associate|mid|senior|director|executive|intern/i.test(text)) {
+          result.metadata.experienceLevel = text.replace(/\s+/g, ' ').trim();
+          break;
+        }
+      }
+
+      // Company size (LinkedIn)
+      const sizeEl = document.querySelector('[class*="company-size"], [class*="num-employees"]');
+      if (sizeEl) result.metadata.companySize = sizeEl.textContent.trim();
+
+      // --- Structured metadata from Indeed ---
+      // Salary on Indeed
+      const indeedSalary = document.querySelector('#salaryInfoAndJobType, [class*="salary-snippet"]');
+      if (indeedSalary && !result.metadata.salary) result.metadata.salary = indeedSalary.textContent.trim();
+
+      // Job type on Indeed
+      const indeedType = document.querySelector('[class*="jobsearch-JobMetadataHeader"]');
+      if (indeedType && !result.metadata.jobType) result.metadata.jobType = indeedType.textContent.trim();
+
+      return result;
     });
 
-    job.summary = summary;
+    job.summary = details.summary;
+    job.fullDescription = details.fullDescription;
+    if (Object.keys(details.metadata).length > 0) {
+      job.metadata = details.metadata;
+    }
   } catch {
-    // Failed to get summary, that's OK
+    // Failed to get details, that's OK
   }
 
   return job;
@@ -342,11 +388,20 @@ function formatJobsMarkdown(jobs, query) {
     lines.push(`Location: ${job.location || 'Unknown'}`);
     lines.push(`Posted: ${job.posted || 'Unknown'}`);
     lines.push(`Source: ${job.source}`);
-    if (job.summary) {
-      lines.push(`Summary: ${job.summary}`);
+    // Structured metadata (if extracted from detail page)
+    if (job.metadata) {
+      if (job.metadata.salary) lines.push(`Salary: ${job.metadata.salary}`);
+      if (job.metadata.jobType) lines.push(`Type: ${job.metadata.jobType}`);
+      if (job.metadata.experienceLevel) lines.push(`Level: ${job.metadata.experienceLevel}`);
+      if (job.metadata.companySize) lines.push(`Company Size: ${job.metadata.companySize}`);
     }
     if (job.link) {
       lines.push(`Link: ${job.link}`);
+    }
+    if (job.fullDescription) {
+      lines.push(`\nFull Description:\n${job.fullDescription}`);
+    } else if (job.summary) {
+      lines.push(`Summary: ${job.summary}`);
     }
     lines.push('');
   });
