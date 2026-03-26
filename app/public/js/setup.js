@@ -28,23 +28,40 @@ export function renderSetupOverlay() {
       <div class="setup-panel" id="setup-panel-profile">
         <div class="setup-form-group">
           <label for="setup-identity">Who are you in one sentence? <span class="required">*</span></label>
-          <textarea id="setup-identity" rows="2" placeholder='e.g., "I build integrations and partner ecosystems at B2B SaaS companies as a product manager."'></textarea>
+          <textarea id="setup-identity" rows="1" placeholder='e.g., "I build integrations and partner ecosystems at B2B SaaS companies as a product manager."'></textarea>
+        </div>
+
+        <div class="setup-form-group">
+          <label for="setup-role">Role <span class="required">*</span></label>
+          <input type="text" id="setup-role" placeholder="e.g., Product Manager, Software Engineer, Data Scientist">
         </div>
 
         <div class="setup-form-row">
           <div class="setup-form-group">
             <label for="setup-level">Current level <span class="required">*</span></label>
-            <input type="text" id="setup-level" placeholder="e.g., Senior PM, Staff Engineer">
+            <input type="text" id="setup-level" placeholder="e.g., Senior, Staff, Lead">
           </div>
           <div class="setup-form-group">
             <label for="setup-target-level">Target level</label>
-            <input type="text" id="setup-target-level" placeholder="e.g., Staff PM, Director">
+            <input type="text" id="setup-target-level" placeholder="e.g., Staff, Director">
+          </div>
+        </div>
+
+        <div class="setup-form-row">
+          <div class="setup-form-group">
+            <label for="setup-years">Total years of experience</label>
+            <input type="number" id="setup-years" placeholder="e.g., 12" min="0" max="50" style="max-width: 120px;">
+          </div>
+          <div class="setup-form-group">
+            <label for="setup-years-role">Years in target role</label>
+            <input type="number" id="setup-years-role" placeholder="e.g., 6" min="0" max="50" style="max-width: 120px;">
           </div>
         </div>
 
         <div class="setup-form-group">
-          <label for="setup-years">Years of experience</label>
-          <input type="number" id="setup-years" placeholder="e.g., 8" min="0" max="50" style="max-width: 120px;">
+          <label for="setup-prev-roles">Previous / other roles</label>
+          <input type="text" id="setup-prev-roles" placeholder="e.g., Business Analyst, Consultant, UX Researcher (comma-separated)">
+          <small class="setup-hint">Helps capture transferable skills from your career history.</small>
         </div>
 
         <div class="setup-form-row">
@@ -56,25 +73,30 @@ export function renderSetupOverlay() {
               <input type="text" id="setup-comp-max" placeholder="$220k">
             </div>
           </div>
+          <div class="setup-form-group setup-comp-flex">
+            <label>&nbsp;</label>
+            <label class="setup-checkbox"><input type="checkbox" id="setup-comp-flexible" checked> Flexible</label>
+          </div>
         </div>
 
-        <div class="setup-form-group">
-          <label for="setup-location">Location <span class="required">*</span></label>
-          <input type="text" id="setup-location" placeholder="e.g., San Francisco, NYC, Remote (US timezone)">
-        </div>
-
-        <div class="setup-form-group">
-          <label>Work style</label>
-          <div class="setup-checkbox-group">
-            <label class="setup-checkbox"><input type="checkbox" id="setup-remote" value="remote"> Remote</label>
-            <label class="setup-checkbox"><input type="checkbox" id="setup-hybrid" value="hybrid"> Hybrid</label>
-            <label class="setup-checkbox"><input type="checkbox" id="setup-onsite" value="onsite"> Onsite</label>
+        <div class="setup-form-row">
+          <div class="setup-form-group" style="flex:2">
+            <label for="setup-location">Location <span class="required">*</span></label>
+            <input type="text" id="setup-location" placeholder="e.g., San Francisco, NYC, Remote (US)">
+          </div>
+          <div class="setup-form-group" style="flex:1">
+            <label>Work style</label>
+            <div class="setup-checkbox-group">
+              <label class="setup-checkbox"><input type="checkbox" id="setup-remote" value="remote"> Remote</label>
+              <label class="setup-checkbox"><input type="checkbox" id="setup-hybrid" value="hybrid"> Hybrid</label>
+              <label class="setup-checkbox"><input type="checkbox" id="setup-onsite" value="onsite"> Onsite</label>
+            </div>
           </div>
         </div>
 
         <div class="setup-form-group">
           <label for="setup-nonneg">Non-negotiables</label>
-          <textarea id="setup-nonneg" rows="3" placeholder="Hard stops — instant skip if violated. One per line.&#10;e.g., Must be remote or NYC&#10;e.g., No defense/weapons companies&#10;e.g., Series A+ only"></textarea>
+          <textarea id="setup-nonneg" rows="2" placeholder="Hard stops — one per line. e.g., Must be remote or NYC&#10;e.g., No defense/weapons companies"></textarea>
         </div>
 
         <div class="setup-nav">
@@ -233,11 +255,15 @@ function switchTab(tabName) {
 
 function getFormData() {
   const identity = document.getElementById('setup-identity')?.value.trim() || '';
+  const role = document.getElementById('setup-role')?.value.trim() || '';
   const level = document.getElementById('setup-level')?.value.trim() || '';
   const targetLevel = document.getElementById('setup-target-level')?.value.trim() || '';
   const years = document.getElementById('setup-years')?.value || '';
+  const yearsInRole = document.getElementById('setup-years-role')?.value || '';
+  const prevRoles = document.getElementById('setup-prev-roles')?.value.trim() || '';
   const compMin = document.getElementById('setup-comp-min')?.value.trim() || '';
   const compMax = document.getElementById('setup-comp-max')?.value.trim() || '';
+  const compFlexible = document.getElementById('setup-comp-flexible')?.checked ?? true;
   const location = document.getElementById('setup-location')?.value.trim() || '';
   const nonneg = document.getElementById('setup-nonneg')?.value.trim() || '';
 
@@ -258,7 +284,8 @@ function getFormData() {
   const domainsFlex = parseInt(document.getElementById('setup-domains-flex')?.value ?? 2);
 
   return {
-    identity, level, targetLevel, years, compMin, compMax, location, workStyle, nonneg,
+    identity, role, level, targetLevel, years, yearsInRole, prevRoles,
+    compMin, compMax, compFlexible, location, workStyle, nonneg,
     titles, industries, domains,
     titlesFlex, industriesFlex, domainsFlex,
     levels, companySize,
@@ -268,6 +295,7 @@ function getFormData() {
 function validate(data) {
   const missing = [];
   if (!data.identity) missing.push('Identity');
+  if (!data.role) missing.push('Role');
   if (!data.level) missing.push('Current level');
   if (data.titles.length === 0) missing.push('At least one job title');
   if (!data.location) missing.push('Location');
@@ -288,9 +316,11 @@ function buildSummary() {
   // Profile section
   summaryHtml += '<div class="setup-confirm-section"><h4>Profile</h4><dl>';
   if (data.identity) summaryHtml += `<dt>Identity</dt><dd>${esc(data.identity)}</dd>`;
+  if (data.role) summaryHtml += `<dt>Role</dt><dd>${esc(data.role)}</dd>`;
   if (data.level) summaryHtml += `<dt>Level</dt><dd>${esc(data.level)}${data.targetLevel ? ' → ' + esc(data.targetLevel) : ''}</dd>`;
-  if (data.years) summaryHtml += `<dt>Experience</dt><dd>${esc(data.years)} years</dd>`;
-  if (data.compMin || data.compMax) summaryHtml += `<dt>Compensation</dt><dd>${esc(data.compMin)}${data.compMax ? ' – ' + esc(data.compMax) : ''}</dd>`;
+  if (data.years) summaryHtml += `<dt>Experience</dt><dd>${esc(data.years)} years total${data.yearsInRole ? ', ' + esc(data.yearsInRole) + ' in target role' : ''}</dd>`;
+  if (data.prevRoles) summaryHtml += `<dt>Previous roles</dt><dd>${esc(data.prevRoles)}</dd>`;
+  if (data.compMin || data.compMax) summaryHtml += `<dt>Compensation</dt><dd>${esc(data.compMin)}${data.compMax ? ' – ' + esc(data.compMax) : ''} ${data.compFlexible ? '<em>(flexible)</em>' : '<em>(firm)</em>'}</dd>`;
   if (data.location) summaryHtml += `<dt>Location</dt><dd>${esc(data.location)}</dd>`;
   if (data.workStyle.length) summaryHtml += `<dt>Work style</dt><dd>${data.workStyle.join(', ')}</dd>`;
   if (data.nonneg) summaryHtml += `<dt>Non-negotiables</dt><dd>${esc(data.nonneg).replace(/\n/g, '<br>')}</dd>`;
@@ -325,9 +355,15 @@ function buildProfileMarkdown(data) {
     '',
     `**Who are you in one sentence?** ${data.identity}`,
     '',
+    `**Role:** ${data.role || ''}`,
+    '',
     `**Your brand / what people know you for:** `,
     '',
-    `**Years of experience:** ${data.years || ''}`,
+    `**Total years of experience:** ${data.years || ''}`,
+    '',
+    `**Years in target role:** ${data.yearsInRole || ''}`,
+    '',
+    `**Previous / other roles:** ${data.prevRoles || ''}`,
     '',
     '---',
     '',
@@ -341,7 +377,7 @@ function buildProfileMarkdown(data) {
     '',
     '## Compensation',
     '',
-    `**Target range:** ${data.compMin}${data.compMax ? ' – ' + data.compMax : ''}`,
+    `**Target range:** ${data.compMin}${data.compMax ? ' – ' + data.compMax : ''} ${data.compFlexible ? '(flexible)' : '(firm)'}`,
     '',
     '---',
     '',
