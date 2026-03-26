@@ -64,6 +64,12 @@ export function findChromeProfile() {
  */
 export function findChromeExecutable() {
   const candidates = [
+    // Windows
+    process.env.LOCALAPPDATA && `${process.env.LOCALAPPDATA}\\Google\\Chrome\\Application\\chrome.exe`,
+    process.env.PROGRAMFILES && `${process.env.PROGRAMFILES}\\Google\\Chrome\\Application\\chrome.exe`,
+    process.env['PROGRAMFILES(X86)'] && `${process.env['PROGRAMFILES(X86)']}\\Google\\Chrome\\Application\\chrome.exe`,
+    'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+    'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
     // Linux
     '/usr/bin/google-chrome',
     '/usr/bin/google-chrome-stable',
@@ -75,7 +81,7 @@ export function findChromeExecutable() {
     '/Applications/Chromium.app/Contents/MacOS/Chromium',
     // Common Linux paths
     '/opt/google/chrome/chrome',
-  ];
+  ].filter(Boolean);
 
   for (const p of candidates) {
     try { accessSyncFs(p); return p; } catch { /* continue */ }
@@ -104,12 +110,14 @@ async function launchBrowser(options = {}) {
 
   if (!executablePath) {
     throw new Error(
-      'Chrome not found. Install Chrome/Chromium, or set CHROME_PATH in .env.\n' +
+      'Chrome not found. Install Chrome or Chromium to use Find Jobs.\n' +
+      '  Windows: Download from google.com/chrome\n' +
       '  macOS: brew install --cask google-chrome\n' +
       '  Linux: sudo apt install chromium-browser'
     );
   }
 
+  console.log(`  [Puppeteer] Launching Chrome: ${executablePath}`);
   const chromeProfile = options.chromeProfile || findChromeProfile();
 
   const launchOptions = {
@@ -123,14 +131,23 @@ async function launchBrowser(options = {}) {
     defaultViewport: { width: 1280, height: 900 },
   };
 
-  // Use the user's Chrome profile for logged-in sessions.
-  // Note: Chrome can't share a profile with a running instance,
-  // so if Chrome is open, Puppeteer will use a temp profile instead.
+  // Use the user's Chrome profile for logged-in sessions (LinkedIn, Indeed).
+  // If Chrome is already running with that profile, Puppeteer can't lock it —
+  // fall back to a temp profile (user won't be logged in, but fetch still works).
   if (chromeProfile) {
     launchOptions.userDataDir = chromeProfile;
   }
 
-  return puppeteer.launch(launchOptions);
+  try {
+    return await puppeteer.launch(launchOptions);
+  } catch (err) {
+    if (chromeProfile && (err.message?.includes('Failed to launch') || err.message?.includes('lock'))) {
+      console.log('  Chrome profile in use — launching with temp profile (you may not be logged into job boards)');
+      delete launchOptions.userDataDir;
+      return puppeteer.launch(launchOptions);
+    }
+    throw err;
+  }
 }
 
 // --- LinkedIn Jobs Scraper ---
@@ -478,6 +495,32 @@ async function loadSeenJobs(dataDir) {
 async function saveSeenJobs(dataDir, seen) {
   const seenPath = join(dataDir, '.seen-jobs.json');
   await writeFile(seenPath, JSON.stringify(seen, null, 2));
+}
+
+/**
+ * Clean up scraped job data — Indeed sometimes concatenates company + location.
+ */
+function cleanJobData(job) {
+  if (!job.company) return job;
+  let company = job.company;
+
+  // Strip common patterns where location gets appended: "CompanyCity, ST" or "CompanyRemote"
+  // Look for city/state pattern stuck to company name: "DeloitteSan Francisco, CA"
+  const cityStateMatch = company.match(/^(.+?)([A-Z][a-z]+(?:\s[A-Z][a-z]+)*,\s*[A-Z]{2}.*)$/);
+  if (cityStateMatch && cityStateMatch[1].length > 2) {
+    company = cityStateMatch[1];
+    if (!job.location) job.location = cityStateMatch[2].trim();
+  }
+
+  // Strip "Hybrid work in...", "Remote", work style suffixes
+  company = company.replace(/(?:Hybrid|Remote|On-site|Onsite)\s*(?:work\s*(?:in)?)?.*$/i, '').trim();
+
+  // Strip trailing location fragments like "San Francisco, CA"
+  company = company.replace(/[A-Z][a-z]+(?:\s[A-Z][a-z]+)*,\s*[A-Z]{2}$/, '').trim();
+
+  // Strip " Inc", " LLC" trailing fragments that got split oddly
+  job.company = company || job.company;
+  return job;
 }
 
 function deduplicateJobs(jobs, seen) {

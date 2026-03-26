@@ -6,8 +6,12 @@ let table = null;
 let allJobs = [];
 let currentFilter = 'all';
 
+// Backward compat: map old scanner terms to new
+const ACTION_MAP = { 'EVALUATE': 'CONSIDER', 'SKIP': 'PASS' };
+
 function badgeFormatter(cell) {
-  const val = cell.getValue() || 'Unscanned';
+  const raw = cell.getValue() || 'Unscanned';
+  const val = ACTION_MAP[raw] || raw;
   const cls = val.toLowerCase();
   return `<span class="status-badge ${cls}">${val}</span>`;
 }
@@ -48,7 +52,7 @@ export function initJobList() {
     data: [],
     layout: 'fitColumns',
     height: '100%',
-    placeholder: '<div class="empty-state"><p class="empty-title">No jobs yet</p><p class="empty-body">Click <strong>Fetch Jobs</strong> or <strong>Add Jobs</strong> to get started.</p></div>',
+    placeholder: '<div class="empty-state"><p class="empty-title">No jobs yet</p><p class="empty-body">Click <strong>Find Jobs</strong> or <strong>Add Jobs</strong> to get started.</p></div>',
     selectable: 1,
     columns: [
       {
@@ -66,14 +70,14 @@ export function initJobList() {
         cssClass: 'cell-role',
       },
       {
-        title: 'Action',
+        title: 'Status',
         field: 'action',
         width: 95,
         formatter: badgeFormatter,
         hozAlign: 'center',
       },
       {
-        title: 'Risk',
+        title: 'Flags',
         field: 'risk',
         width: 75,
         formatter: riskFormatter,
@@ -86,7 +90,7 @@ export function initJobList() {
         cssClass: 'cell-muted',
       },
       {
-        title: 'Date',
+        title: 'Found',
         field: 'date',
         width: 85,
         formatter: dateFormatter,
@@ -124,7 +128,10 @@ function applyFilter() {
   } else if (currentFilter === 'applied') {
     table.setFilter((data) => data.pipelineStatus === 'applied' || data.pipelineStatus === 'interview' || data.pipelineStatus === 'offered');
   } else {
-    table.setFilter('action', '=', currentFilter);
+    // Backward compat: match old terms too (EVALUATE→CONSIDER, SKIP→PASS)
+    const COMPAT = { 'CONSIDER': ['CONSIDER', 'EVALUATE'], 'PASS': ['PASS', 'SKIP'] };
+    const matches = COMPAT[currentFilter] || [currentFilter];
+    table.setFilter((data) => matches.includes(data.action));
   }
 }
 

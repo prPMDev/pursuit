@@ -24,8 +24,26 @@ export function renderSettingsModal() {
       </div>
 
       <div class="settings-section">
-        <h4>API Key</h4>
+        <h4>AI Configuration</h4>
         <div id="api-key-status"></div>
+        <div class="settings-field" style="margin-top:8px">
+          <label for="settings-ai-provider">Provider</label>
+          <select id="settings-ai-provider" style="max-width:240px">
+            <option value="anthropic">Anthropic (Claude)</option>
+            <option value="openai">OpenAI (GPT)</option>
+            <option value="gemini">Google (Gemini)</option>
+          </select>
+        </div>
+        <div class="settings-field" style="margin-top:8px">
+          <label for="settings-ai-key">API Key</label>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input type="password" id="settings-ai-key" placeholder="Paste your API key" style="max-width:360px">
+            <button class="btn btn-ghost btn-sm" id="settings-ai-toggle" type="button">Show</button>
+            <button class="btn btn-secondary btn-sm" id="settings-ai-test" type="button">Test & Save</button>
+          </div>
+          <small class="setup-hint" id="settings-ai-hint">Get a key at <a href="https://console.anthropic.com/" target="_blank">console.anthropic.com</a></small>
+          <span class="setup-ai-status" id="settings-ai-status" style="display:block;margin-top:4px"></span>
+        </div>
       </div>
 
       <div class="settings-section">
@@ -177,6 +195,57 @@ export function initSettings() {
     await loadSettingsUI();
   });
 
+  // Settings AI provider hint
+  const SETTINGS_HINTS = {
+    anthropic: { url: 'https://console.anthropic.com/', label: 'console.anthropic.com', placeholder: 'sk-ant-...' },
+    openai: { url: 'https://platform.openai.com/api-keys', label: 'platform.openai.com', placeholder: 'sk-proj-...' },
+    gemini: { url: 'https://aistudio.google.com/apikey', label: 'aistudio.google.com', placeholder: 'AIza...' },
+  };
+
+  function updateSettingsProviderHint() {
+    const provider = document.getElementById('settings-ai-provider')?.value || 'anthropic';
+    const hint = SETTINGS_HINTS[provider];
+    const el = document.getElementById('settings-ai-hint');
+    const keyInput = document.getElementById('settings-ai-key');
+    if (el && hint) el.innerHTML = `Get a key at <a href="${hint.url}" target="_blank">${hint.label}</a>`;
+    if (keyInput && hint) keyInput.placeholder = hint.placeholder;
+  }
+
+  document.getElementById('settings-ai-provider')?.addEventListener('change', updateSettingsProviderHint);
+
+  document.getElementById('settings-ai-toggle')?.addEventListener('click', () => {
+    const input = document.getElementById('settings-ai-key');
+    const btn = document.getElementById('settings-ai-toggle');
+    if (input.type === 'password') { input.type = 'text'; btn.textContent = 'Hide'; }
+    else { input.type = 'password'; btn.textContent = 'Show'; }
+  });
+
+  document.getElementById('settings-ai-test')?.addEventListener('click', async () => {
+    const provider = document.getElementById('settings-ai-provider')?.value;
+    const key = document.getElementById('settings-ai-key')?.value.trim();
+    const statusEl = document.getElementById('settings-ai-status');
+    const btn = document.getElementById('settings-ai-test');
+
+    if (!key) { statusEl.textContent = '✗ Enter an API key first'; statusEl.className = 'setup-ai-status error'; return; }
+
+    btn.disabled = true;
+    statusEl.textContent = 'Testing...';
+    statusEl.className = 'setup-ai-status';
+
+    try {
+      await api('/ai/test', { method: 'POST', body: { provider, key } });
+      await api('/ai/configure', { method: 'POST', body: { provider, key } });
+      statusEl.textContent = '✓ Connected & saved';
+      statusEl.className = 'setup-ai-status success';
+      await loadSettingsUI();
+    } catch (err) {
+      statusEl.textContent = `✗ ${err.message || 'Connection failed'}`;
+      statusEl.className = 'setup-ai-status error';
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
   // Save search config
   document.getElementById('btn-save-search-config')?.addEventListener('click', async () => {
     const searchConfig = {
@@ -217,7 +286,10 @@ export function initSettings() {
 
     // With API key: fetch + scan. Without: fetch only (collect jobs for later).
     const endpoint = health.apiKeyConfigured ? '/fetch-and-scan' : '/fetch';
-    showLoading(health.apiKeyConfigured ? 'Browsing job boards...' : 'Collecting listings (no API key — scan later)...');
+    showLoading(
+      health.apiKeyConfigured ? 'Searching job boards and evaluating matches...' : 'Searching job boards for listings...',
+      health.apiKeyConfigured ? 'This may take 1-2 minutes. Browsing boards, then running AI evaluation.' : 'This may take a minute. Add an API key in Settings to auto-evaluate results.'
+    );
     try {
       const result = await api(endpoint, { method: 'POST' });
       hideLoading();
@@ -269,8 +341,8 @@ async function loadSettingsUI() {
 
     const keyStatus = document.getElementById('api-key-status');
     keyStatus.innerHTML = settings.apiKeyConfigured
-      ? '<p style="color: var(--green);">&#x2713; API key configured (in .env file)</p>'
-      : '<p style="color: var(--red);">&#x2717; No API key. Add ANTHROPIC_API_KEY to app/.env</p>';
+      ? '<p style="color: var(--green);">&#x2713; API key configured</p>'
+      : '<p style="color: var(--red);">&#x2717; No API key configured</p>';
 
     // Load structured search config
     const config = settings.searchConfig;
@@ -384,7 +456,7 @@ function updateFetchCounter(remaining) {
     btn.disabled = true;
     btn.style.opacity = '0.5';
   } else {
-    btn.textContent = `Fetch Jobs (${remaining} left)`;
+    btn.textContent = `Find Jobs (${remaining} left)`;
     btn.disabled = false;
     btn.style.opacity = '1';
   }

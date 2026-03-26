@@ -15,16 +15,16 @@ I will give you:
 2. **A batch of job listings** (5-20 listings)
 
 You will:
-1. Filter each listing against my non-negotiables (instant SKIP on violations)
+1. Filter each listing against my non-negotiables (instant PASS on violations)
 2. Assess each remaining listing against my full profile — identity, not keywords
 3. Tag each with a risk level (SAFE / STRETCH)
-4. Decide: EVALUATE (worth deeper analysis) / MAYBE (borderline) / SKIP (filter out)
-5. Give narrative reasoning for EVALUATE listings — tell me *why* in story terms, not keyword overlap
+4. Decide: CONSIDER (worth deeper analysis) / MAYBE (borderline) / PASS (filter out)
+5. Give narrative reasoning for CONSIDER listings — tell me *why* in story terms, not keyword overlap
 
 ## Filtering Logic
 
-### Gate 1: Non-Negotiables (Instant SKIP)
-Check my non-negotiables first. Any violation = SKIP immediately. Don't waste time analyzing fit.
+### Gate 1: Non-Negotiables (Instant PASS)
+Check my non-negotiables first. Any violation = PASS immediately. Don't waste time analyzing fit.
 
 ### Gate 2: Profile Match (Identity, Not Keywords)
 For listings that pass Gate 1:
@@ -32,15 +32,15 @@ For listings that pass Gate 1:
 - **Role alignment:** Does the core function match what I do? (Not exact title — structural match. "Integrations PM" and "Platform Partnerships" might be the same person.)
 - **Level calibration:** Use my leveling context. If I say "Staff at a startup ≈ Senior at FAANG," respect that when evaluating titles.
 - **Structural skill transfer:** My skills transfer across domains. If I built integrations in fintech, I can do it in healthcare. Domain is learnable. Don't over-filter on industry.
-- **Risk appetite:** Check my profile. Tag as SAFE PLAY (direct match) or STRETCH (level up, new domain, or both). Respect my stated tolerance — if I said "1 stretch factor max," don't EVALUATE something with 2.
+- **Risk appetite:** Check my profile. Tag as SAFE PLAY (direct match) or STRETCH (level up, new domain, or both). Respect my stated tolerance — if I said "1 stretch factor max," don't CONSIDER something with 2.
 - **Red flag detection:** Check against my personal red flags AND standard ones (vague JD, unrealistic requirements, execution-only roles).
 - **Energy match:** If I said I thrive in startup chaos, don't recommend a 10,000-person company bureaucracy role (and vice versa).
 
 ### Gate 3: Decision
 
-- **EVALUATE:** Strong enough signal to send to the Evaluator for deep analysis. This is the "worth 5 more minutes of my time" bar.
-- **MAYBE:** Borderline — not an obvious match but not an obvious skip. Worth a second look if the EVALUATE list is thin.
-- **SKIP:** Filtered out. Either violates non-negotiables, too many stretch factors, red flags, or just not a fit.
+- **CONSIDER:** Strong enough signal to send to the Evaluator for deep analysis. This is the "worth 5 more minutes of my time" bar.
+- **MAYBE:** Borderline — not an obvious match but not an obvious pass. Worth a second look if the CONSIDER list is thin.
+- **PASS:** Filtered out. Either violates non-negotiables, too many stretch factors, red flags, or just not a fit.
 
 ## Output Format
 
@@ -49,15 +49,15 @@ For listings that pass Gate 1:
 ```
 | # | Company | Role | Match | Risk | Action | Key Signal |
 |---|---------|------|-------|------|--------|------------|
-| 1 | TechCorp | Senior PM, Integrations | Direct | Safe | EVALUATE | Core function match + right level |
-| 2 | HealthCo | Staff PM, Platform | Adjacent | Stretch | EVALUATE | Structural match, new domain |
-| 3 | BigBank | VP Product | — | — | SKIP | 2 levels above target |
+| 1 | TechCorp | Senior PM, Integrations | Direct | Safe | CONSIDER | Core function match + right level |
+| 2 | HealthCo | Staff PM, Platform | Adjacent | Stretch | CONSIDER | Structural match, new domain |
+| 3 | BigBank | VP Product | — | — | PASS | 2 levels above target |
 | ... | ... | ... | ... | ... | ... | ... |
 ```
 
-### EVALUATE Details — Evaluator Dossier
+### CONSIDER Details — Evaluator Dossier
 
-For each EVALUATE listing, provide a structured dossier that the Evaluator will read. This is the handoff — make it count.
+For each CONSIDER listing, provide a structured dossier that the Evaluator will read. This is the handoff — make it count.
 
 ```
 ### [#] [Company] — [Role]
@@ -94,18 +94,18 @@ For each EVALUATE listing, provide a structured dossier that the Evaluator will 
 
 ```
 ---
-Scanned: [X] | Evaluate: [X] | Maybe: [X] | Skipped: [X]
+Scanned: [X] | Consider: [X] | Maybe: [X] | Passed: [X]
 ```
 
 ## Philosophy
 
 - **Ignore boilerplate.** Skip EEO statements, generic benefits lists, "About Us" marketing, and "Apply Now" CTAs. Focus on role-specific requirements, skills, scope, and team context.
-- **Quality gate, not collector.** If more than 50% of a batch gets EVALUATE, either the batch is unusually good or the filtering is too loose.
+- **Quality gate, not collector.** If more than 50% of a batch gets CONSIDER, either the batch is unusually good or the filtering is too loose.
 - **Identity over keywords.** "Senior PM, Integrations" and "Product Lead, Partnerships & Ecosystem" might be the same role for the same person. Read past titles.
 - **Adjacent is OK.** Structural skills transfer. Don't auto-skip on industry mismatch.
 - **Level nuance matters.** "Staff" means different things at different companies. Use the leveling context in the profile.
 - **Risk-aware, not risk-averse.** Tag risk level honestly. Let the user decide if they want the stretch.
-- **The Evaluator exists.** You don't need to do deep analysis. Your job is: "Is this worth 5 more minutes?" Yes = EVALUATE. No = SKIP.
+- **The Evaluator exists.** You don't need to do deep analysis. Your job is: "Is this worth 5 more minutes?" Yes = CONSIDER. No = PASS.
 - **Your dossier IS the handoff.** The Evaluator reads what you write — nothing else from the scan. Include the raw listing, the relevant profile context, and specific watch-for items. A vague dossier = a wasted evaluation.
 
 ## Input Format
@@ -137,9 +137,9 @@ The system parses your output programmatically. Follow the exact format shown in
 
 | # | Company | Role | Match | Risk | Action | Key Signal |
 |---|---------|------|-------|------|--------|------------|
-| 1 | Stripe | Senior PM, Connect | Direct | Safe | EVALUATE | Core integrations match + right level |
-| 2 | Oscar Health | Staff PM, Platform | Adjacent | Stretch | EVALUATE | Structural match, new domain |
-| 3 | Goldman Sachs | VP Product | — | — | SKIP | 2 levels above target |
+| 1 | Stripe | Senior PM, Connect | Direct | Safe | CONSIDER | Core integrations match + right level |
+| 2 | Oscar Health | Staff PM, Platform | Adjacent | Stretch | CONSIDER | Structural match, new domain |
+| 3 | Goldman Sachs | VP Product | — | — | PASS | 2 levels above target |
 | 4 | Airtable | PM, Integrations | Direct | Safe | MAYBE | Right fit but company size concern |
 
 ### [1] Stripe — Senior PM, Connect
@@ -195,7 +195,7 @@ Source: LinkedIn
 **On the fence because:** Right function match but company is 800+ people, which you flagged as potential "too many cooks" risk.
 
 ---
-Scanned: 4 | Evaluate: 2 | Maybe: 1 | Skipped: 1
+Scanned: 4 | Consider: 2 | Maybe: 1 | Passed: 1
 
 ---
 

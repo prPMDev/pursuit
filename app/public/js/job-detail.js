@@ -12,6 +12,13 @@ export function initJobDetail() {
     closeDetailPanel();
   });
 
+  // Escape key closes detail panel
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !document.getElementById('detail-panel')?.classList.contains('hidden')) {
+      closeDetailPanel();
+    }
+  });
+
   // Evaluate button
   document.getElementById('btn-evaluate').addEventListener('click', async () => {
     if (!currentJob) return;
@@ -146,16 +153,28 @@ export function showJobDetail(job) {
     job.date ? `Posted: ${job.date}` : null,
   ].filter(Boolean).join(' · ');
 
-  // Tags
+  // Tags + Narrative — hide scanner section entirely for unscanned jobs
   const tagsContainer = document.getElementById('detail-tags');
-  tagsContainer.innerHTML = (job.tags || []).map(tag =>
-    `<span class="tag ${tag.color}">${escapeHtml(tag.label)}</span>`
-  ).join('');
-
-  // Narrative
   const narrativeEl = document.getElementById('detail-narrative');
-  narrativeEl.textContent = job.narrative || 'No narrative available.';
-  narrativeEl.classList.toggle('hidden', !job.narrative);
+  const scannerSection = tagsContainer.closest('.detail-section');
+  const isUnscanned = !job.action || job.action === 'Unscanned' || job.action === 'UNSCANNED';
+
+  if (isUnscanned) {
+    // Collapse scanner rationale — just show a compact hint
+    scannerSection.classList.remove('hidden');
+    tagsContainer.innerHTML = '';
+    narrativeEl.textContent = 'Not yet evaluated. Add an API key in Settings to enable AI evaluation.';
+    narrativeEl.classList.remove('hidden');
+    scannerSection.querySelector('h4').textContent = 'Status';
+  } else {
+    scannerSection.classList.remove('hidden');
+    scannerSection.querySelector('h4').textContent = 'Scanner Rationale';
+    tagsContainer.innerHTML = (job.tags || []).map(tag =>
+      `<span class="tag ${tag.color}">${escapeHtml(tag.label)}</span>`
+    ).join('');
+    narrativeEl.textContent = job.narrative || '';
+    narrativeEl.classList.toggle('hidden', !job.narrative);
+  }
 
   // Risk
   const riskSection = document.getElementById('detail-risk-section');
@@ -196,6 +215,8 @@ export function showJobDetail(job) {
 
 function renderEvaluator() {
   const container = document.getElementById('detail-evaluator');
+  const evalSection = container.closest('.detail-section');
+  if (evalSection) evalSection.classList.remove('hidden'); // reset visibility
 
   if (currentJob.hasEvaluation && currentJob.evaluation) {
     // Parse evaluation result — support both old and new field names
@@ -263,9 +284,10 @@ function renderEvaluator() {
       if (e.key === 'Enter') document.getElementById('btn-send-follow-up')?.click();
     });
   } else if (!health.apiKeyConfigured) {
-    container.innerHTML = `
-      <span style="font-size: 12px; color: var(--text-muted);">Evaluator requires API key — add ANTHROPIC_API_KEY to app/.env</span>
-    `;
+    // Hide evaluator section entirely when no API key — scanner hint already covers it
+    const evalSection = container.closest('.detail-section');
+    if (evalSection) evalSection.classList.add('hidden');
+    return;
   } else {
     container.innerHTML = `
       <button class="btn btn-sm" id="btn-evaluate">Run Evaluator</button>

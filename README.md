@@ -53,9 +53,9 @@ Two ways:
 ### 3. Scan
 
 Claude reads your profile + reference examples + the batch of listings and filters each one:
-- **EVALUATE** — worth 5 more minutes of your time
+- **CONSIDER** — worth 5 more minutes of your time
 - **MAYBE** — borderline, worth a second look
-- **SKIP** — filtered out
+- **PASS** — filtered out
 
 Each job gets a narrative explanation ("this is your integrations story applied to healthcare") plus risk tagging (Safe Play vs Stretch).
 

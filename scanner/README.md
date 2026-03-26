@@ -56,11 +56,11 @@ The formatter produces standardized markdown. Small batches (2-3 listings) can g
 2. Paste the contents of [`scanner-prompt.md`](scanner-prompt.md)
 3. Paste your profile (`my-profile.md`)
 4. Paste your formatted batch of listings
-5. Get back a filtered table with EVALUATE / MAYBE / SKIP decisions
+5. Get back a filtered table with CONSIDER / MAYBE / PASS decisions
 
 ### Step 4: Hand Off to Evaluator
 
-Take your EVALUATE listings to the [Evaluator](../evaluator/):
+Take your CONSIDER listings to the [Evaluator](../evaluator/):
 - Has a LinkedIn post? → Run [LinkedIn Evaluator](../evaluator/linkedin-evaluator-prompt.md) (Step 1)
 - Has JD text? → Run [Job Fit Evaluator](../evaluator/HLL-job-eval-prompt.md) (Step 2)
 
@@ -87,7 +87,7 @@ cat listings.txt | python scanner/scripts/formatter.py --stdin  # from pipe
 #    - my-profile.md
 #    - formatted batch output
 #
-# 4. Review EVALUATE listings → send to Evaluator
+# 4. Review CONSIDER listings → send to Evaluator
 ```
 
 No dependencies to install. `formatter.py` uses Python standard library only (Python 3.6+).
@@ -101,14 +101,14 @@ A filtered table with narrative reasoning:
 ```
 | # | Company | Role | Match | Risk | Action | Key Signal |
 |---|---------|------|-------|------|--------|------------|
-| 1 | Acme Health | Sr PM, Integrations | Direct | Safe | EVALUATE | Core match + right level |
-| 2 | CloudScale | Staff PM, Platform | Direct | Stretch | EVALUATE | Platform match, level up |
-| 3 | MegaCorp | Director of PM | — | — | SKIP | 2 levels above target |
+| 1 | Acme Health | Sr PM, Integrations | Direct | Safe | CONSIDER | Core match + right level |
+| 2 | CloudScale | Staff PM, Platform | Direct | Stretch | CONSIDER | Platform match, level up |
+| 3 | MegaCorp | Director of PM | — | — | PASS | 2 levels above target |
 ```
 
-For each EVALUATE listing: **narrative reasoning** ("This is your integrations story applied to healthcare"), risk assessment, and things to watch for in the Evaluator.
+For each CONSIDER listing: **narrative reasoning** ("This is your integrations story applied to healthcare"), risk assessment, and things to watch for in the Evaluator.
 
-Stats line: `Scanned: 8 | Evaluate: 3 | Maybe: 1 | Skipped: 4`
+Stats line: `Scanned: 8 | Consider: 3 | Maybe: 1 | Passed: 4`
 
 See [`examples/`](examples/) for full examples.
 
@@ -116,12 +116,12 @@ See [`examples/`](examples/) for full examples.
 
 ## Philosophy
 
-- **Filter down, not collect more.** If >50% of a batch gets EVALUATE, the filtering is too loose.
+- **Filter down, not collect more.** If >50% of a batch gets CONSIDER, the filtering is too loose.
 - **Identity over keywords.** "Senior PM, Integrations" and "Product Lead, Partnerships & Ecosystem" might be the same role for the same person.
 - **Adjacent is OK.** Structural skills transfer across domains. The Evaluator validates this deeper.
 - **Level nuance matters.** "Staff" means different things at different companies. The profile captures this.
 - **The Evaluator exists downstream.** The Scanner doesn't need to do deep analysis. Just answer: "Is this worth 5 more minutes?"
-- **Human decides.** Scanner recommends. You choose which EVALUATEs to pursue.
+- **Human decides.** Scanner recommends. You choose which CONSIDERs to pursue.
 
 ---
 
@@ -154,7 +154,7 @@ These are planned but not yet built. The MVP works today without them.
 Automatically fetch job listings from RSS feeds (Indeed) and parse job alert emails (LinkedIn, Glassdoor). Daily digest via cron. Eliminates manual copy-paste for recurring sources.
 
 ### 2. Learning Loop
-Track what you actually PURSUE vs SKIP over time. Auto-generate "Decision Patterns" summary that feeds back into the scanner prompt. Scanner gets smarter without you manually updating criteria.
+Track what you actually PURSUE vs PASS over time. Auto-generate "Decision Patterns" summary that feeds back into the scanner prompt. Scanner gets smarter without you manually updating criteria.
 
 ### 3. Deduplication
 Track seen listings across scanner runs. Don't resurface the same job from Monday's scan on Tuesday. Normalize company + title for fuzzy matching.

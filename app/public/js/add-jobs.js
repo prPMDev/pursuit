@@ -20,7 +20,7 @@ export function renderAddJobsModal() {
       <textarea id="input-listings" rows="12" placeholder="Senior PM at TechCorp, Remote&#10;Own integrations roadmap, 5+ years experience&#10;https://linkedin.com/jobs/view/123&#10;&#10;---&#10;&#10;Staff PM - Platform at HealthCo&#10;NYC Hybrid, Series B&#10;https://indeed.com/viewjob?id=456"></textarea>
       <div class="modal-actions">
         <button class="btn" data-modal="modal-add-jobs">Cancel</button>
-        <button class="btn btn-primary" id="btn-submit-listings">Add &amp; Scan</button>
+        <button class="btn btn-primary" id="btn-submit-listings">Add &amp; Evaluate</button>
       </div>
     </div>
   `;
@@ -40,15 +40,10 @@ export function initAddJobs() {
     showModal('modal-add-jobs');
     // Update button label based on API key status
     const submitBtn = document.getElementById('btn-submit-listings');
-    submitBtn.textContent = health.apiKeyConfigured ? 'Add & Scan' : 'Save Jobs';
+    submitBtn.textContent = health.apiKeyConfigured ? 'Add & Evaluate' : 'Save Jobs';
     document.getElementById('input-listings').focus();
   });
 
-  // Scan button also opens add jobs modal
-  document.getElementById('btn-scan')?.addEventListener('click', () => {
-    showModal('modal-add-jobs');
-    document.getElementById('input-listings').focus();
-  });
 
   document.getElementById('btn-submit-listings').addEventListener('click', async () => {
     const listings = document.getElementById('input-listings').value.trim();
@@ -64,14 +59,14 @@ export function initAddJobs() {
           body: { listings },
         });
         document.getElementById('input-listings').value = '';
-        alert('Jobs saved. Add an API key to app/.env to scan and evaluate them.');
+        alert('Jobs saved. Configure an API key in Settings to scan and evaluate them.');
       } catch (err) {
         alert(`Save failed: ${err.message}`);
       }
       return;
     }
 
-    showLoading('Scanning listings against your profile...');
+    showLoading('Evaluating jobs against your profile...', 'AI is reviewing each listing. Usually takes 30-60 seconds.');
 
     try {
       const result = await api('/scan', {

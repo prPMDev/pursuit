@@ -108,7 +108,7 @@ function buildFallbackScannerSection(job) {
   return [
     `- Match: ${job.matchType || 'Unknown'}`,
     `- Risk: ${job.risk || 'Unknown'}`,
-    `- Action: ${job.action || 'EVALUATE'}`,
+    `- Action: ${job.action || 'CONSIDER'}`,
     `- Key signal: ${job.keySignal || '—'}`,
     `- Watch for: ${job.watchFor || '—'}`,
     job.narrative ? `\n**Why:** ${job.narrative}` : '',
@@ -251,7 +251,7 @@ function parseScannerOutput(markdown) {
     });
   }
 
-  // Parse EVALUATE details
+  // Parse CONSIDER details (backward compat: also match EVALUATE)
   const detailRegex = /###\s*\[(\d+)\]\s*(.+?)\n([\s\S]*?)(?=###\s*\[|## MAYBE|---\s*\nScanned|$)/g;
   while ((match = detailRegex.exec(markdown)) !== null) {
     const idx = parseInt(match[1]);
@@ -287,7 +287,7 @@ function parseScannerOutput(markdown) {
   }
 
   // Parse stats line
-  const statsMatch = markdown.match(/Scanned:\s*(\d+)\s*\|\s*Evaluate:\s*(\d+)\s*\|\s*Maybe:\s*(\d+)\s*\|\s*Skipped:\s*(\d+)/);
+  const statsMatch = markdown.match(/Scanned:\s*(\d+)\s*\|\s*(?:Consider|Evaluate):\s*(\d+)\s*\|\s*Maybe:\s*(\d+)\s*\|\s*(?:Passed|Skipped):\s*(\d+)/);
   const stats = statsMatch ? {
     scanned: parseInt(statsMatch[1]),
     evaluate: parseInt(statsMatch[2]),
@@ -318,9 +318,9 @@ function extractTags(job, profileText) {
   else if (job.risk === 'Stretch') tags.push({ label: 'Stretch bet', color: 'amber' });
 
   // Action tags
-  if (job.action === 'EVALUATE') tags.push({ label: 'EVALUATE', color: 'green' });
+  if (job.action === 'CONSIDER' || job.action === 'EVALUATE') tags.push({ label: 'CONSIDER', color: 'green' });
   else if (job.action === 'MAYBE') tags.push({ label: 'MAYBE', color: 'amber' });
-  else if (job.action === 'SKIP') tags.push({ label: 'SKIP', color: 'gray' });
+  else if (job.action === 'PASS' || job.action === 'SKIP') tags.push({ label: 'PASS', color: 'gray' });
 
   // Extract signal-based tags from narrative/keySignal
   const text = `${job.keySignal || ''} ${job.narrative || ''} ${job.riskDetail || ''}`.toLowerCase();
@@ -569,9 +569,9 @@ app.post('/api/scan', async (req, res) => {
 
     const parsed = parseScannerOutput(result);
 
-    // Create living dossier per EVALUATE job (single source of truth)
+    // Create living dossier per CONSIDER job (backward compat: also match EVALUATE)
     for (const job of (parsed.jobs || [])) {
-      if (job.action && job.action.toUpperCase() === 'EVALUATE') {
+      if (job.action && ['CONSIDER', 'EVALUATE'].includes(job.action.toUpperCase())) {
         job.id = job.id || jobId(job.company, job.role);
         await createDossier(job);
         job.dossierFile = `${job.id}.md`;
@@ -763,6 +763,158 @@ function generateSearchQueries(config) {
   // Cap at 12 queries to avoid rate limit issues
   return queries.slice(0, 12);
 }
+
+// --- AI Configuration ---
+
+// Multi-provider AI call helper
+async function callAI(provider, key, model, systemPrompt, userMessage) {
+  if (provider === 'anthropic') {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({ model: model || 'claude-sonnet-4-20250514', max_tokens: 4096, system: systemPrompt, messages: [{ role: 'user', content: userMessage }] }),
+    });
+    if (!resp.ok) {
+      if (resp.status === 401) throw new Error('Invalid API key');
+      if (resp.status === 429) throw new Error('Rate limited — try again in a minute');
+      throw new Error(`API error (${resp.status})`);
+    }
+    const data = await resp.json();
+    return data.content[0].text;
+  }
+
+  if (provider === 'openai') {
+    const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({ model: model || 'gpt-4o', max_tokens: 4096, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userMessage }] }),
+    });
+    if (!resp.ok) {
+      if (resp.status === 401) throw new Error('Invalid API key');
+      if (resp.status === 429) throw new Error('Rate limited — try again in a minute');
+      throw new Error(`API error (${resp.status})`);
+    }
+    const data = await resp.json();
+    return data.choices[0].message.content;
+  }
+
+  if (provider === 'gemini') {
+    const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model || 'gemini-2.0-flash'}:generateContent?key=${key}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ systemInstruction: { parts: [{ text: systemPrompt }] }, contents: [{ parts: [{ text: userMessage }] }] }),
+    });
+    if (!resp.ok) {
+      if (resp.status === 400 || resp.status === 403) throw new Error('Invalid API key');
+      if (resp.status === 429) throw new Error('Rate limited — try again in a minute');
+      throw new Error(`API error (${resp.status})`);
+    }
+    const data = await resp.json();
+    return data.candidates[0].content.parts[0].text;
+  }
+
+  throw new Error(`Unknown provider: ${provider}`);
+}
+
+const AI_MODELS = {
+  anthropic: [
+    { id: 'claude-sonnet-4-20250514', name: 'Claude Sonnet 4', default: true },
+    { id: 'claude-haiku-4-20250414', name: 'Claude Haiku 4 (faster, cheaper)' },
+  ],
+  openai: [
+    { id: 'gpt-4o', name: 'GPT-4o', default: true },
+    { id: 'gpt-4o-mini', name: 'GPT-4o Mini (faster, cheaper)' },
+  ],
+  gemini: [
+    { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', default: true },
+    { id: 'gemini-2.5-pro-preview-05-06', name: 'Gemini 2.5 Pro' },
+  ],
+};
+
+// Test AI connection — does NOT persist
+app.post('/api/ai/test', async (req, res) => {
+  try {
+    const { provider, key } = req.body;
+    if (!provider || !key) return res.status(400).json({ error: 'Provider and key required' });
+
+    await callAI(provider, key, null, 'Respond with exactly: ok', 'ping');
+    res.json({ success: true, models: AI_MODELS[provider] || [] });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Save AI configuration
+app.post('/api/ai/configure', async (req, res) => {
+  try {
+    const { provider, key, model } = req.body;
+    settings.ai = { provider, key, model };
+    await saveSettings();
+
+    // Update in-memory API_KEY for callClaude fallback
+    if (provider === 'anthropic') {
+      process.env.ANTHROPIC_API_KEY = key;
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get AI status (no key exposed)
+app.get('/api/ai/status', (req, res) => {
+  const ai = settings.ai || {};
+  res.json({
+    configured: !!(ai.provider && ai.key),
+    provider: ai.provider || null,
+    model: ai.model || null,
+  });
+});
+
+// Synthesize profile from form data
+app.post('/api/ai/synthesize', async (req, res) => {
+  try {
+    const { provider, key, model, formData } = req.body;
+    if (!provider || !key) return res.status(400).json({ error: 'AI not configured' });
+
+    const systemPrompt = `You are a career profile writer for a job search tool called Pursuit. Your job is to synthesize a user's raw profile data into a polished, first-person professional profile in Markdown format.
+
+Rules:
+- Write in first person
+- Be specific and concrete, not generic
+- Marry the user's own identity sentence (their voice) with the structured data
+- Organize into clear sections: Professional Identity, Experience & Background, What I'm Looking For, Non-Negotiables
+- Keep it concise — this is a working document, not a resume
+- If they provided an identity sentence, use it as the opening anchor and expand from there
+- If they didn't provide one, synthesize one from their role + level + domain`;
+
+    const userMessage = `Here is the raw profile data. Synthesize this into a polished Pursuit profile:
+
+Identity sentence: ${formData.identity || '(not provided)'}
+Role: ${formData.role || '(not provided)'}
+Current level: ${formData.level || '(not provided)'}
+Target level: ${formData.targetLevel || '(not provided)'}
+Total years of experience: ${formData.years || '(not provided)'}
+Years in target role: ${formData.yearsInRole || '(not provided)'}
+Previous roles: ${formData.prevRoles || '(none)'}
+Compensation range: ${formData.compMin || '?'} - ${formData.compMax || '?'} ${formData.compFlexible ? '(flexible)' : '(firm)'}
+Location: ${formData.location || '(not provided)'}
+Work style: ${(formData.workStyle || []).join(', ') || '(not specified)'}
+Non-negotiables: ${formData.nonneg || '(none)'}
+
+Job titles interested in: ${(formData.titles || []).join(', ') || '(none)'}
+Industries: ${(formData.industries || []).join(', ') || '(any)'}
+Domains: ${(formData.domains || []).join(', ') || '(any)'}
+Target levels: ${(formData.levels || []).join(', ') || '(any)'}
+Company size preference: ${(formData.companySize || []).join(', ') || '(any)'}`;
+
+    const profile = await callAI(provider, key, model, systemPrompt, userMessage);
+    res.json({ profile });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // --- Setup Flow ---
 
@@ -1033,9 +1185,6 @@ app.post('/api/fetch', async (req, res) => {
 
   fetchInProgress = true;
   const fetchNumber = getTodaysFetchCount(); // 0-indexed before recording
-  recordFetch();
-  settings.lastFetchTime = new Date().toISOString();
-  await saveSettings();
 
   try {
     const result = await fetchJobs(searchQueries, {
@@ -1044,6 +1193,11 @@ app.post('/api/fetch', async (req, res) => {
       maxPages: 3,
       getSummaries: true,
     });
+
+    // Only count successful fetches
+    recordFetch();
+    settings.lastFetchTime = new Date().toISOString();
+    await saveSettings();
 
     fetchInProgress = false;
     res.json({
@@ -1078,9 +1232,6 @@ app.post('/api/fetch-and-scan', async (req, res) => {
 
   fetchInProgress = true;
   const fetchNumber = getTodaysFetchCount();
-  recordFetch();
-  settings.lastFetchTime = new Date().toISOString();
-  await saveSettings();
 
   try {
     // Step 1: Fetch jobs
@@ -1090,6 +1241,11 @@ app.post('/api/fetch-and-scan', async (req, res) => {
       maxPages: 3,
       getSummaries: true,
     });
+
+    // Only count successful fetches
+    recordFetch();
+    settings.lastFetchTime = new Date().toISOString();
+    await saveSettings();
 
     fetchInProgress = false;
 
@@ -1156,10 +1312,10 @@ async function start() {
   app.listen(PORT, () => {
     console.log(`\n  Pursuit Dashboard running at http://localhost:${PORT}\n`);
     if (!API_KEY || API_KEY === 'sk-ant-your-key-here') {
-      console.log('  ⚠  No API key configured. Copy .env.example to .env and add your Anthropic key.');
+      console.log('  ⚠  No API key configured. Add one via Settings in the UI or copy .env.example to .env.');
     }
     if (!systemChecks.chromePath) {
-      console.log('  ⚠  Chrome/Chromium not found. Fetch Jobs will not work.');
+      console.log('  ⚠  Chrome/Chromium not found. Find Jobs will not work.');
       console.log('    Install Chrome or set CHROME_PATH in .env.');
     }
     if (!systemChecks.chromeProfilePath) {

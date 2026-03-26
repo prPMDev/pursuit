@@ -25,7 +25,7 @@ const SAMPLE_PROFILES = [
       nonneg: 'Must support visa sponsorship\nNo defense/weapons companies\nSeries A+ only',
     },
     search: {
-      titles: ['Product Manager', 'Senior Product Manager', 'Staff Product Manager', 'Director of Product'],
+      titles: ['Product Manager', 'Senior Product Manager', 'Staff Product Manager', 'Group Product Manager'],
       industries: ['SaaS', 'Fintech', 'Enterprise Software'],
       domains: ['Platform', 'Integrations', 'Developer Tools', 'Payments'],
       titlesFlex: 2, industriesFlex: 2, domainsFlex: 3,
@@ -132,6 +132,7 @@ export function renderSetupOverlay() {
       <div class="setup-tabs">
         <button class="setup-tab active" data-tab="profile">Profile</button>
         <button class="setup-tab" data-tab="search">Search</button>
+        <button class="setup-tab" data-tab="ai">AI Setup</button>
         <button class="setup-tab" data-tab="confirm">Confirm</button>
       </div>
 
@@ -186,7 +187,7 @@ export function renderSetupOverlay() {
           </div>
           <div class="setup-form-group setup-comp-flex">
             <label>&nbsp;</label>
-            <label class="setup-checkbox"><input type="checkbox" id="setup-comp-flexible" checked> Flexible</label>
+            <label class="setup-checkbox"><input type="checkbox" id="setup-comp-flexible" checked> Flexible <span class="tooltip-icon" title="Flexible means ±10% from your stated range">?</span></label>
           </div>
         </div>
 
@@ -271,13 +272,63 @@ export function renderSetupOverlay() {
 
         <div class="setup-nav">
           <button class="btn btn-ghost" id="setup-back-profile">Back</button>
-          <button class="btn btn-primary" id="setup-to-confirm">Next: Review</button>
+          <button class="btn btn-primary" id="setup-to-ai">Next: AI Setup</button>
         </div>
       </div>
 
-      <!-- Tab 3: Confirm -->
+      <!-- Tab 3: AI Setup -->
+      <div class="setup-panel hidden" id="setup-panel-ai">
+        <p class="setup-hint">Connect an AI provider to power job evaluation and profile synthesis. You can skip this and add it later in Settings.</p>
+
+        <div class="setup-form-group">
+          <label for="setup-ai-provider">Provider</label>
+          <select id="setup-ai-provider">
+            <option value="anthropic">Anthropic (Claude)</option>
+            <option value="openai">OpenAI (GPT)</option>
+            <option value="gemini">Google (Gemini)</option>
+          </select>
+        </div>
+
+        <div class="setup-form-group">
+          <label for="setup-ai-key">API Key</label>
+          <div class="setup-ai-key-row">
+            <input type="password" id="setup-ai-key" placeholder="sk-ant-...">
+            <button class="btn btn-ghost btn-sm" id="setup-ai-toggle-key" type="button">Show</button>
+          </div>
+          <small class="setup-hint" id="setup-ai-key-hint">Get a key at <a href="https://console.anthropic.com/" target="_blank">console.anthropic.com</a></small>
+        </div>
+
+        <div class="setup-form-group">
+          <button class="btn btn-secondary" id="setup-ai-test" type="button">Test Connection</button>
+          <span class="setup-ai-status" id="setup-ai-status"></span>
+        </div>
+
+        <div class="setup-form-group hidden" id="setup-ai-model-group">
+          <label for="setup-ai-model">Model</label>
+          <select id="setup-ai-model"></select>
+        </div>
+
+        <div class="setup-nav">
+          <button class="btn btn-ghost" id="setup-back-search">Back</button>
+          <div class="setup-nav-right">
+            <button class="btn btn-ghost" id="setup-skip-ai">Skip — I'll set this up later</button>
+            <button class="btn btn-primary" id="setup-to-confirm">Next: Review & Build Profile</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 4: Confirm -->
       <div class="setup-panel hidden" id="setup-panel-confirm">
         <div class="setup-confirm-summary" id="setup-summary"></div>
+
+        <div class="setup-ai-profile hidden" id="setup-ai-profile">
+          <h4>Here's the profile for your Pursuit</h4>
+          <span class="setup-ai-status" id="setup-build-status"></span>
+          <textarea id="setup-ai-profile-text" rows="12"></textarea>
+          <div class="setup-ai-profile-actions" id="setup-ai-profile-actions" style="display:none">
+            <button class="btn btn-ghost btn-sm" id="setup-regenerate" type="button">Regenerate with AI</button>
+          </div>
+        </div>
 
         <div class="setup-validation-msg hidden" id="setup-validation">
           <sl-badge variant="warning">Missing required fields</sl-badge>
@@ -285,8 +336,11 @@ export function renderSetupOverlay() {
         </div>
 
         <div class="setup-nav">
-          <button class="btn btn-ghost" id="setup-back-search">Back</button>
-          <button class="btn btn-primary" id="setup-complete" disabled>Start Using Pursuit</button>
+          <button class="btn btn-ghost btn-danger-text" id="setup-reset" type="button">Reset</button>
+          <div class="setup-nav-right">
+            <button class="btn btn-ghost" id="setup-back-ai">Back</button>
+            <button class="btn btn-primary" id="setup-complete" disabled>Start Using Pursuit</button>
+          </div>
         </div>
       </div>
     </div>
@@ -407,8 +461,23 @@ function switchTab(tabName) {
   document.querySelectorAll('.setup-panel').forEach(p => p.classList.add('hidden'));
   document.getElementById(`setup-panel-${tabName}`)?.classList.remove('hidden');
 
-  // If confirm tab, build summary
-  if (tabName === 'confirm') buildSummary();
+  // If confirm tab, build summary and auto-trigger AI if configured
+  if (tabName === 'confirm') {
+    buildSummary();
+    if (aiConfigured) {
+      buildAIProfile();
+    } else {
+      // Show plain profile from fields
+      const data = getFormData();
+      const profileText = document.getElementById('setup-ai-profile-text');
+      const profileSection = document.getElementById('setup-ai-profile');
+      if (profileText && profileSection) {
+        profileText.value = buildProfileMarkdown(data);
+        profileSection.classList.remove('hidden');
+        profileSection.querySelector('h4').textContent = "Here's your profile";
+      }
+    }
+  }
 }
 
 function getFormData() {
@@ -571,9 +640,18 @@ async function completeSetup() {
   btn.textContent = 'Saving...';
 
   try {
-    // Save profile
-    const profileMd = buildProfileMarkdown(data);
+    // Save profile — use AI-generated version if available, otherwise build from fields
+    const aiProfileText = document.getElementById('setup-ai-profile-text')?.value.trim();
+    const profileMd = aiProfileText || buildProfileMarkdown(data);
     await api('/profile', { method: 'PUT', body: { content: profileMd } });
+
+    // Save AI config if configured
+    if (aiConfigured) {
+      const provider = document.getElementById('setup-ai-provider')?.value;
+      const key = document.getElementById('setup-ai-key')?.value.trim();
+      const model = document.getElementById('setup-ai-model')?.value;
+      await api('/ai/configure', { method: 'POST', body: { provider, key, model } });
+    }
 
     // Save search config
     const searchConfig = {
@@ -605,6 +683,155 @@ async function completeSetup() {
   }
 }
 
+// --- AI Setup logic ---
+
+const PROVIDER_HINTS = {
+  anthropic: { url: 'https://console.anthropic.com/', label: 'console.anthropic.com', placeholder: 'sk-ant-...' },
+  openai: { url: 'https://platform.openai.com/api-keys', label: 'platform.openai.com', placeholder: 'sk-proj-...' },
+  gemini: { url: 'https://aistudio.google.com/apikey', label: 'aistudio.google.com', placeholder: 'AIza...' },
+};
+
+let aiConfigured = false;
+
+function updateProviderHint() {
+  const provider = document.getElementById('setup-ai-provider')?.value || 'anthropic';
+  const hint = PROVIDER_HINTS[provider];
+  const el = document.getElementById('setup-ai-key-hint');
+  const keyInput = document.getElementById('setup-ai-key');
+  if (el && hint) el.innerHTML = `Get a key at <a href="${hint.url}" target="_blank">${hint.label}</a>`;
+  if (keyInput && hint) keyInput.placeholder = hint.placeholder;
+  // Reset test state when provider changes
+  document.getElementById('setup-ai-status').textContent = '';
+  document.getElementById('setup-ai-model-group')?.classList.add('hidden');
+  aiConfigured = false;
+  updateConfirmAI();
+}
+
+async function testAIConnection() {
+  const provider = document.getElementById('setup-ai-provider')?.value;
+  const key = document.getElementById('setup-ai-key')?.value.trim();
+  const statusEl = document.getElementById('setup-ai-status');
+  const testBtn = document.getElementById('setup-ai-test');
+
+  if (!key) { statusEl.textContent = '✗ Enter an API key first'; statusEl.className = 'setup-ai-status error'; return; }
+
+  testBtn.disabled = true;
+  statusEl.textContent = 'Testing...';
+  statusEl.className = 'setup-ai-status';
+
+  try {
+    const resp = await api('/ai/test', { method: 'POST', body: { provider, key } });
+    statusEl.textContent = '✓ Connected';
+    statusEl.className = 'setup-ai-status success';
+    aiConfigured = true;
+
+    // Populate model dropdown
+    const modelGroup = document.getElementById('setup-ai-model-group');
+    const modelSelect = document.getElementById('setup-ai-model');
+    modelSelect.innerHTML = resp.models.map(m => `<option value="${m.id}" ${m.default ? 'selected' : ''}>${m.name}</option>`).join('');
+    modelGroup.classList.remove('hidden');
+    updateConfirmAI();
+  } catch (err) {
+    statusEl.textContent = `✗ ${err.message || 'Connection failed'}`;
+    statusEl.className = 'setup-ai-status error';
+    aiConfigured = false;
+    updateConfirmAI();
+  } finally {
+    testBtn.disabled = false;
+  }
+}
+
+function updateConfirmAI() {
+  // No-op — AI state is handled when switching to confirm tab
+}
+
+async function buildAIProfile() {
+  const statusEl = document.getElementById('setup-build-status');
+  const profileSection = document.getElementById('setup-ai-profile');
+  const profileText = document.getElementById('setup-ai-profile-text');
+  const actionsEl = document.getElementById('setup-ai-profile-actions');
+
+  profileSection.classList.remove('hidden');
+  profileSection.querySelector('h4').textContent = "Here's the profile for your Pursuit";
+  statusEl.textContent = 'Building your profile with AI...';
+  statusEl.className = 'setup-ai-status';
+  profileText.value = '';
+  if (actionsEl) actionsEl.style.display = 'none';
+
+  try {
+    const provider = document.getElementById('setup-ai-provider')?.value;
+    const key = document.getElementById('setup-ai-key')?.value.trim();
+    const model = document.getElementById('setup-ai-model')?.value;
+    const formData = getFormData();
+
+    const resp = await api('/ai/synthesize', {
+      method: 'POST',
+      body: { provider, key, model, formData },
+    });
+
+    profileText.value = resp.profile;
+    statusEl.textContent = '';
+    if (actionsEl) actionsEl.style.display = '';
+  } catch (err) {
+    statusEl.textContent = `✗ ${err.message || 'AI failed — showing plain profile'}`;
+    statusEl.className = 'setup-ai-status error';
+    // Fallback to plain profile
+    const data = getFormData();
+    profileText.value = buildProfileMarkdown(data);
+    if (actionsEl) actionsEl.style.display = '';
+  }
+}
+
+function resetSetup() {
+  // Profile tab
+  document.getElementById('setup-identity').value = '';
+  document.getElementById('setup-role').value = '';
+  document.getElementById('setup-level').value = '';
+  document.getElementById('setup-target-level').value = '';
+  document.getElementById('setup-years').value = '';
+  document.getElementById('setup-years-role').value = '';
+  document.getElementById('setup-prev-roles').value = '';
+  document.getElementById('setup-comp-min').value = '';
+  document.getElementById('setup-comp-max').value = '';
+  document.getElementById('setup-comp-flexible').checked = true;
+  document.getElementById('setup-location').value = '';
+  document.getElementById('setup-remote').checked = false;
+  document.getElementById('setup-hybrid').checked = false;
+  document.getElementById('setup-onsite').checked = false;
+  document.getElementById('setup-nonneg').value = '';
+
+  // Search tab
+  if (tagInputs.titles) tagInputs.titles.setValue([]);
+  if (tagInputs.industries) tagInputs.industries.setValue([]);
+  if (tagInputs.domains) tagInputs.domains.setValue([]);
+  document.querySelectorAll('[name="setup-levels"]').forEach(el => { el.checked = false; });
+  document.querySelectorAll('[name="setup-company-size"]').forEach(el => { el.checked = false; });
+  const resetSlider = (id, val) => { const el = document.getElementById(id); if (el) { el.value = val; el.dispatchEvent(new Event('sl-input')); } };
+  resetSlider('setup-titles-flex', 2);
+  resetSlider('setup-industries-flex', 2);
+  resetSlider('setup-domains-flex', 2);
+
+  // AI tab
+  document.getElementById('setup-ai-provider').value = 'anthropic';
+  document.getElementById('setup-ai-key').value = '';
+  document.getElementById('setup-ai-status').textContent = '';
+  document.getElementById('setup-ai-model-group')?.classList.add('hidden');
+  aiConfigured = false;
+  updateProviderHint();
+
+  // Confirm tab
+  document.getElementById('setup-ai-profile')?.classList.add('hidden');
+  document.getElementById('setup-build-status').textContent = '';
+
+  // Deselect sample buttons
+  document.querySelectorAll('.btn-sample').forEach(btn => btn.classList.remove('active'));
+
+  // Go back to Profile tab
+  switchTab('profile');
+}
+
+// --- Init ---
+
 export function initSetup() {
   // Tab navigation
   document.querySelectorAll('.setup-tab').forEach(tab => {
@@ -613,9 +840,28 @@ export function initSetup() {
 
   // Next/Back buttons
   document.getElementById('setup-to-search')?.addEventListener('click', () => switchTab('search'));
+  document.getElementById('setup-to-ai')?.addEventListener('click', () => switchTab('ai'));
   document.getElementById('setup-to-confirm')?.addEventListener('click', () => switchTab('confirm'));
   document.getElementById('setup-back-profile')?.addEventListener('click', () => switchTab('profile'));
   document.getElementById('setup-back-search')?.addEventListener('click', () => switchTab('search'));
+  document.getElementById('setup-back-ai')?.addEventListener('click', () => switchTab('ai'));
+  document.getElementById('setup-skip-ai')?.addEventListener('click', () => { aiConfigured = false; updateConfirmAI(); switchTab('confirm'); });
+
+  // AI Setup
+  document.getElementById('setup-ai-provider')?.addEventListener('change', updateProviderHint);
+  document.getElementById('setup-ai-test')?.addEventListener('click', testAIConnection);
+  document.getElementById('setup-ai-toggle-key')?.addEventListener('click', () => {
+    const input = document.getElementById('setup-ai-key');
+    const btn = document.getElementById('setup-ai-toggle-key');
+    if (input.type === 'password') { input.type = 'text'; btn.textContent = 'Hide'; }
+    else { input.type = 'password'; btn.textContent = 'Show'; }
+  });
+
+  // AI Regenerate on Confirm tab
+  document.getElementById('setup-regenerate')?.addEventListener('click', buildAIProfile);
+
+  // Reset
+  document.getElementById('setup-reset')?.addEventListener('click', resetSetup);
 
   // Sample profile buttons
   document.querySelectorAll('.btn-sample').forEach(btn => {

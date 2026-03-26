@@ -12,14 +12,11 @@ export function renderTopbar() {
     </div>
     <div class="topbar-actions">
       <span class="fetch-status" id="fetch-status"></span>
-      <button class="btn btn-sm btn-ghost" id="btn-fetch-now" title="Browse job boards">
-        ${icon('refresh-cw', 16, 'btn-icon-inline')} Fetch Jobs
+      <button class="btn btn-sm btn-ghost" id="btn-fetch-now" title="Find jobs from boards and evaluate them">
+        ${icon('refresh-cw', 16, 'btn-icon-inline')} Find Jobs
       </button>
       <button class="btn btn-sm btn-ghost" id="btn-add-jobs" title="Paste job listings">
         ${icon('plus', 16, 'btn-icon-inline')} Add Jobs
-      </button>
-      <button class="btn btn-sm btn-primary" id="btn-scan" title="Scan jobs">
-        ${icon('filter', 16, 'btn-icon-inline')} Scan
       </button>
       <div class="topbar-divider"></div>
       <button class="btn btn-icon-only" id="btn-profile" title="Profile">${icon('user', 16)}</button>

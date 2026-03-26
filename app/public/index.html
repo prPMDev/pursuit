@@ -32,9 +32,9 @@
       <div class="filter-bar">
         <div class="filter-group">
           <button class="filter-btn active" data-filter="all">All</button>
-          <button class="filter-btn" data-filter="EVALUATE">Evaluate</button>
+          <button class="filter-btn" data-filter="CONSIDER">Consider</button>
           <button class="filter-btn" data-filter="MAYBE">Maybe</button>
-          <button class="filter-btn" data-filter="SKIP">Skipped</button>
+          <button class="filter-btn" data-filter="PASS">Passed</button>
         </div>
         <div class="filter-group">
           <button class="filter-btn" data-filter="pursuing">Pursuing</button>
@@ -47,8 +47,8 @@
     <!-- Detail panel (slides in from right, pushes list) -->
     <section class="detail-panel hidden" id="detail-panel">
       <div class="detail-panel-header">
-        <button class="btn btn-icon-only btn-ghost" id="btn-close-detail" title="Close">
-          <span data-icon="x"></span>
+        <button class="btn btn-ghost btn-close-detail" id="btn-close-detail" title="Close (Esc)">
+          ✕ Close
         </button>
       </div>
       <div class="detail-content" id="detail-content">

@@ -8,16 +8,16 @@ This is an example of what the scanner prompt produces when given the sample pro
 
 | # | Company | Role | Match | Risk | Action | Key Signal |
 |---|---------|------|-------|------|--------|------------|
-| 1 | Acme Health | Sr PM, Integrations | Direct | Safe | EVALUATE | Core integrations match, right level, remote |
-| 2 | CloudScale Inc | Staff PM, Platform | Direct | Stretch | EVALUATE | Platform/API match, level stretch, manages PMs |
-| 3 | MegaCorp Financial | Director of PM | — | — | SKIP | 2+ levels above, requires managing managers |
+| 1 | Acme Health | Sr PM, Integrations | Direct | Safe | CONSIDER | Core integrations match, right level, remote |
+| 2 | CloudScale Inc | Staff PM, Platform | Direct | Stretch | CONSIDER | Platform/API match, level stretch, manages PMs |
+| 3 | MegaCorp Financial | Director of PM | — | — | PASS | 2+ levels above, requires managing managers |
 | 4 | EduFlow | PM, Partnerships | Adjacent | Stretch | MAYBE | Right function but seed stage + junior level |
-| 5 | DataVault | Sr Program Manager | — | — | SKIP | Program management, not product management |
-| 6 | APIFirst | Product Lead, DevEx | Adjacent | Stretch | EVALUATE | Developer experience is adjacent to API/integrations work |
-| 7 | RetailNext | Sr PM (Checkout) | — | — | SKIP | Payments/checkout — no structural skill overlap with integrations/platform |
-| 8 | DefenseTech | Head of Product | — | — | SKIP | Non-negotiable: defense company |
+| 5 | DataVault | Sr Program Manager | — | — | PASS | Program management, not product management |
+| 6 | APIFirst | Product Lead, DevEx | Adjacent | Stretch | CONSIDER | Developer experience is adjacent to API/integrations work |
+| 7 | RetailNext | Sr PM (Checkout) | — | — | PASS | Payments/checkout — no structural skill overlap with integrations/platform |
+| 8 | DefenseTech | Head of Product | — | — | PASS | Non-negotiable: defense company |
 
-## EVALUATE Details
+## CONSIDER Details
 
 ### [1] Acme Health — Senior Product Manager, Integrations
 **Why:** This is your integrations story applied to healthcare. The core function — own integrations roadmap, build partner ecosystem, work across eng and BD — is exactly what you do. Healthcare is a new domain, but that's a feature not a bug at your risk tolerance. Series B at 180 people is your sweet spot.
@@ -40,4 +40,4 @@ This is an example of what the scanner prompt produces when given the sample pro
 **On the fence because:** Right function (partner integrations) but seed stage (your non-negotiable is Series A+) and the level is junior (3+ years = mid-level, you have 8). Could be interesting if they'd level up the role, but as written it's below your floor.
 
 ---
-Scanned: 8 | Evaluate: 3 | Maybe: 1 | Skipped: 4
+Scanned: 8 | Consider: 3 | Maybe: 1 | Passed: 4

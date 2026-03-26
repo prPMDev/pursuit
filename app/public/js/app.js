@@ -39,13 +39,22 @@ export async function api(path, options = {}) {
   return data;
 }
 
-export function showLoading(text = 'Working...') {
+export function showLoading(text = 'Working...', hint = '') {
   document.getElementById('loading-text').textContent = text;
+  document.getElementById('loading-hint').textContent = hint;
   document.getElementById('loading').classList.remove('hidden');
+  document.getElementById('loading-cancel').classList.add('hidden');
+  // Show cancel after 15 seconds
+  clearTimeout(window._loadingCancelTimer);
+  window._loadingCancelTimer = setTimeout(() => {
+    const btn = document.getElementById('loading-cancel');
+    if (btn) btn.classList.remove('hidden');
+  }, 15000);
 }
 
 export function hideLoading() {
   document.getElementById('loading').classList.add('hidden');
+  clearTimeout(window._loadingCancelTimer);
 }
 
 // Legacy modal helpers (re-exported from modal.js for backwards compat)
@@ -62,7 +71,8 @@ function renderLoadingOverlay() {
     <div class="loading-content">
       <div class="spinner"></div>
       <p id="loading-text">Scanning...</p>
-      <p class="loading-hint">Quality gate, not collector.</p>
+      <p class="loading-hint" id="loading-hint"></p>
+      <button class="btn btn-ghost btn-sm hidden" id="loading-cancel" type="button">Cancel</button>
     </div>
   `;
   container.appendChild(el);
@@ -114,6 +124,7 @@ async function init() {
   // Phase 1: Render all components into mount points
   renderTopbar();
   renderLoadingOverlay();
+  document.getElementById('loading-cancel')?.addEventListener('click', () => hideLoading());
   renderSetupOverlay();
   renderAddJobsModal();
   renderProfileModal();
@@ -126,7 +137,6 @@ async function init() {
     health.chromeFound = result.chromeFound;
 
     const fetchBtn = document.getElementById('btn-fetch-now');
-    const scanBtn = document.getElementById('btn-scan');
     const statusEl = document.getElementById('fetch-status');
 
     function disableBtn(btn, title) {
@@ -137,12 +147,15 @@ async function init() {
     }
 
     if (!health.apiKeyConfigured) {
-      statusEl.textContent = '\u26A0 No API key — add to app/.env';
-      disableBtn(scanBtn, 'API key required. Add ANTHROPIC_API_KEY to app/.env');
+      statusEl.innerHTML = '\u26A0 No API key — <a href="#" id="open-ai-settings" style="color:var(--primary);text-decoration:underline;cursor:pointer">configure in Settings</a>';
+      statusEl.querySelector('#open-ai-settings')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        document.getElementById('btn-settings')?.click();
+      });
     }
     if (!health.chromeFound) {
       if (!statusEl.textContent) statusEl.textContent = '\u26A0 No Chrome found';
-      disableBtn(fetchBtn, 'Chrome/Chromium not installed. Install it or set CHROME_PATH in .env. Add Jobs still works.');
+      disableBtn(fetchBtn, 'Chrome/Chromium not installed. Add Jobs still works.');
     }
   } catch (err) {
     console.error('Health check failed:', err);
