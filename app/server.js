@@ -58,12 +58,74 @@ async function readMarkdown(filepath) {
 }
 
 function jobId(company, title) {
-  const raw = `${company}-${title}`.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-  return raw.substring(0, 60);
+  // Must match browser.js dedupeKey() — MD5 of "company|title"
+  const raw = `${company}|${title}`.toLowerCase().trim();
+  return createHash('md5').update(raw).digest('hex').substring(0, 12);
 }
+
+const DOSSIERS_DIR = join(DATA, 'dossiers');
 
 function datePrefix() {
   return new Date().toISOString().split('T')[0];
+}
+
+// --- Dossier helpers (living document per job) ---
+
+function buildJobDetailsSection(job) {
+  return [
+    `- Source: ${job.source || '—'}`,
+    `- Date: ${job.date || '—'}`,
+    `- Location: ${job.location || '—'}`,
+    job.link ? `- Link: ${job.link}` : null,
+    job.salary ? `- Salary: ${job.salary}` : null,
+    job.jobType ? `- Type: ${job.jobType}` : null,
+    job.experienceLevel ? `- Level posted: ${job.experienceLevel}` : null,
+    job.companySize ? `- Company size: ${job.companySize}` : null,
+    job.availability ? `- Availability: ${job.availability.status}${job.availability.stale ? ' (stale)' : ''}` : null,
+  ].filter(Boolean).join('\n');
+}
+
+async function createDossier(job) {
+  await mkdir(DOSSIERS_DIR, { recursive: true });
+  const content = [
+    `# Dossier: ${job.company} — ${job.role}`,
+    `**ID:** ${job.id}`,
+    `**Created:** ${datePrefix()}`,
+    '',
+    '## Scanner Assessment',
+    job.rawDossierBlock || buildFallbackScannerSection(job),
+    '',
+    '## Job Details',
+    buildJobDetailsSection(job),
+    '',
+    '## Full Listing',
+    job.fullDescription || job.summary || job.rawListing || '—',
+  ].join('\n');
+  await writeFile(join(DOSSIERS_DIR, `${job.id}.md`), content);
+}
+
+function buildFallbackScannerSection(job) {
+  return [
+    `- Match: ${job.matchType || 'Unknown'}`,
+    `- Risk: ${job.risk || 'Unknown'}`,
+    `- Action: ${job.action || 'EVALUATE'}`,
+    `- Key signal: ${job.keySignal || '—'}`,
+    `- Watch for: ${job.watchFor || '—'}`,
+    job.narrative ? `\n**Why:** ${job.narrative}` : '',
+    job.riskDetail ? `\n**Risk detail:** ${job.riskDetail}` : '',
+  ].filter(Boolean).join('\n');
+}
+
+async function appendToDossier(id, content) {
+  const path = join(DOSSIERS_DIR, `${id}.md`);
+  const existing = await readMarkdown(path);
+  if (existing) {
+    await writeFile(path, existing + '\n\n' + content);
+  }
+}
+
+async function readDossier(id) {
+  return readMarkdown(join(DOSSIERS_DIR, `${id}.md`));
 }
 
 async function callClaude(systemPrompt, userMessage) {
@@ -196,6 +258,7 @@ function parseScannerOutput(markdown) {
     const job = jobs.find(j => j.index === idx);
     if (job) {
       const detail = match[3];
+      job.rawDossierBlock = detail.trim(); // Preserve Scanner's raw block verbatim
       const whyMatch = detail.match(/\*\*Why:\*\*\s*(.+?)(?:\n|$)/);
       const riskMatch = detail.match(/\*\*Risk(?:\s*detail)?:\*\*\s*(.+?)(?:\n|$)/);
       const watchMatch = detail.match(/\*\*Watch for:\*\*\s*(.+?)(?:\n|$)/);
@@ -231,6 +294,11 @@ function parseScannerOutput(markdown) {
     maybe: parseInt(statsMatch[3]),
     skipped: parseInt(statsMatch[4]),
   } : null;
+
+  // Warn if parsing produced no jobs from non-empty output
+  if (jobs.length === 0 && markdown.trim().length > 100) {
+    console.warn('WARNING: parseScannerOutput found 0 jobs in non-empty Scanner output. Format may have changed.');
+  }
 
   return { jobs, stats, raw: markdown };
 }
@@ -501,43 +569,12 @@ app.post('/api/scan', async (req, res) => {
 
     const parsed = parseScannerOutput(result);
 
-    // Write dossier files for EVALUATE jobs (handoff to Evaluator)
-    await mkdir(join(DATA, 'scans', 'dossiers'), { recursive: true });
+    // Create living dossier per EVALUATE job (single source of truth)
     for (const job of (parsed.jobs || [])) {
       if (job.action && job.action.toUpperCase() === 'EVALUATE') {
-        const slug = `${(job.company || 'unknown').toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${(job.role || 'unknown').toLowerCase().replace(/[^a-z0-9]+/g, '-')}`.slice(0, 80);
-        const dossierContent = [
-          `# Dossier: ${job.company} — ${job.role}`,
-          '',
-          '## Scanner Assessment',
-          `- Match: ${job.matchType || 'Unknown'}`,
-          `- Risk: ${job.risk || 'Unknown'}`,
-          `- Action: EVALUATE`,
-          `- Key signal: ${job.keySignal || '—'}`,
-          `- Watch for: ${job.watchFor || '—'}`,
-          `- Narrative: ${job.narrative || '—'}`,
-          job.riskDetail ? `- Risk detail: ${job.riskDetail}` : '',
-          job.matchedSkills ? `- Matched skills: ${job.matchedSkills}` : '',
-          job.levelContext ? `- Level context: ${job.levelContext}` : '',
-          job.riskAppetiteNote ? `- Risk appetite note: ${job.riskAppetiteNote}` : '',
-          job.redFlagsToCheck ? `- Red flags to check: ${job.redFlagsToCheck}` : '',
-          '',
-          '## Job Details',
-          `- Source: ${job.source || '—'}`,
-          `- Date: ${job.date || '—'}`,
-          `- Location: ${job.location || '—'}`,
-          job.link ? `- Link: ${job.link}` : '',
-          job.salary ? `- Salary: ${job.salary}` : '',
-          job.jobType ? `- Type: ${job.jobType}` : '',
-          job.experienceLevel ? `- Level posted: ${job.experienceLevel}` : '',
-          job.companySize ? `- Company size: ${job.companySize}` : '',
-          '',
-          '## Full Listing',
-          job.fullDescription || job.summary || job.rawListing || `Company: ${job.company}\nRole: ${job.role}`,
-        ].filter(Boolean).join('\n');
-
-        await writeFile(join(DATA, 'scans', 'dossiers', `${slug}.md`), dossierContent);
-        job.dossierFile = `${slug}.md`;
+        job.id = job.id || jobId(job.company, job.role);
+        await createDossier(job);
+        job.dossierFile = `${job.id}.md`;
       }
     }
 
@@ -565,10 +602,15 @@ app.post('/api/evaluate/:id', async (req, res) => {
       ? systemParts.join('\n\n---\n\n')
       : await readMarkdown(EVALUATOR_PROMPT); // fallback to legacy prompt
 
+    if (!systemPrompt) {
+      return res.status(500).json({ error: 'Evaluator prompts not found. Check evaluator/*.md files.' });
+    }
+
     // Build user message with profile + learned profile + dossier
     const learnedProfile = await readMarkdown(join(DATA, 'learned-profile.md'));
-    let dossier = null;
-    if (dossierFile) {
+    // Read living dossier (try new location first, then legacy)
+    let dossier = await readDossier(id);
+    if (!dossier && dossierFile) {
       dossier = await readMarkdown(join(DATA, 'scans', 'dossiers', dossierFile));
     }
 
@@ -581,7 +623,12 @@ app.post('/api/evaluate/:id', async (req, res) => {
 
     const result = await callClaude(systemPrompt, userParts.join('\n\n'));
 
+    // Append evaluation to living dossier
+    await appendToDossier(id, `## Evaluator Assessment\n**Date:** ${datePrefix()}\n${result}`);
+
+    // Also write standalone file for backwards compat
     const filename = `${datePrefix()}-${id}.md`;
+    await mkdir(join(DATA, 'evaluations'), { recursive: true });
     await writeFile(join(DATA, 'evaluations', filename), result);
 
     res.json({ filename, result });
@@ -594,7 +641,7 @@ app.post('/api/evaluate/:id', async (req, res) => {
 app.post('/api/evaluate/:id/follow-up', async (req, res) => {
   try {
     const { id } = req.params;
-    const { question, previousEvaluation } = req.body;
+    const { question, previousEvaluation, dossierFile } = req.body;
     if (!question) return res.status(400).json({ error: 'Question required' });
 
     const systemParts = [
@@ -603,12 +650,31 @@ app.post('/api/evaluate/:id/follow-up', async (req, res) => {
     ].filter(Boolean);
     const systemPrompt = systemParts.join('\n\n---\n\n');
 
-    const userMessage = [
-      `## Previous Evaluation\n\n${previousEvaluation || 'No previous evaluation available.'}`,
-      `## My Question\n\n${question}`,
-    ].join('\n\n');
+    if (!systemPrompt) {
+      return res.status(500).json({ error: 'Evaluator prompts not found. Check evaluator/*.md files.' });
+    }
 
-    const result = await callClaude(systemPrompt, userMessage);
+    // Include full context so evaluator can answer JD-specific questions
+    const profile = await readMarkdown(join(DATA, 'profile.md'));
+    let dossier = null;
+    // Try new dossier location first, then legacy
+    dossier = await readMarkdown(join(DATA, 'dossiers', `${id}.md`));
+    if (!dossier && dossierFile) {
+      dossier = await readMarkdown(join(DATA, 'scans', 'dossiers', dossierFile));
+    }
+
+    const userParts = [
+      profile ? `## My Profile\n\n${profile}` : '',
+      dossier ? `## Dossier\n\n${dossier}` : '',
+      `## Previous Evaluation\n\n${previousEvaluation || '—'}`,
+      `## My Question\n\n${question}`,
+    ].filter(Boolean);
+
+    const result = await callClaude(systemPrompt, userParts.join('\n\n'));
+
+    // Append follow-up to living dossier
+    await appendToDossier(id, `## Follow-ups\n### ${datePrefix()} — "${question}"\n${result}`);
+
     res.json({ result });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -634,6 +700,11 @@ app.post('/api/decisions', async (req, res) => {
     content += row;
 
     await writeFile(join(DATA, 'decisions.md'), content);
+
+    // Append decision to living dossier
+    const id = jobId(company, role);
+    await appendToDossier(id, `## User Decision\n**Decision:** ${decision}\n**Date:** ${datePrefix()}`);
+
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -1039,10 +1110,9 @@ app.post('/api/fetch-and-scan', async (req, res) => {
 
     const profile = await readMarkdown(join(DATA, 'profile.md'));
     if (!profile) {
-      return res.json({
-        ok: true,
+      return res.status(400).json({
+        error: 'Jobs fetched but not scanned — no profile set.',
         totalFetched: result.totalFetched,
-        message: 'Jobs fetched but not scanned — no profile set.',
         files: result.files,
       });
     }

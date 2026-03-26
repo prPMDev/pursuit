@@ -245,7 +245,7 @@ function renderEvaluator() {
       try {
         const result = await api(`/evaluate/${currentJob.id}/follow-up`, {
           method: 'POST',
-          body: { question, previousEvaluation: currentJob.evaluation },
+          body: { question, previousEvaluation: currentJob.evaluation, dossierFile: currentJob.dossierFile },
         });
         document.getElementById('follow-up-input').classList.add('hidden');
         const responseEl = document.getElementById('follow-up-response');

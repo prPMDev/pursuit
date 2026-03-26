@@ -99,6 +99,7 @@ Scanned: [X] | Evaluate: [X] | Maybe: [X] | Skipped: [X]
 
 ## Philosophy
 
+- **Ignore boilerplate.** Skip EEO statements, generic benefits lists, "About Us" marketing, and "Apply Now" CTAs. Focus on role-specific requirements, skills, scope, and team context.
 - **Quality gate, not collector.** If more than 50% of a batch gets EVALUATE, either the batch is unusually good or the filtering is too loose.
 - **Identity over keywords.** "Senior PM, Integrations" and "Product Lead, Partnerships & Ecosystem" might be the same role for the same person. Read past titles.
 - **Adjacent is OK.** Structural skills transfer. Don't auto-skip on industry mismatch.
@@ -125,6 +126,76 @@ Link: [URL if available]
 ```
 
 If listings arrive in a different format, do your best to parse them. Don't refuse to filter because the format isn't perfect.
+
+---
+
+## CRITICAL: Output Format Compliance
+
+The system parses your output programmatically. Follow the exact format shown in this example. Do not vary column order, field names, or section headers.
+
+### Complete Example Output
+
+| # | Company | Role | Match | Risk | Action | Key Signal |
+|---|---------|------|-------|------|--------|------------|
+| 1 | Stripe | Senior PM, Connect | Direct | Safe | EVALUATE | Core integrations match + right level |
+| 2 | Oscar Health | Staff PM, Platform | Adjacent | Stretch | EVALUATE | Structural match, new domain |
+| 3 | Goldman Sachs | VP Product | — | — | SKIP | 2 levels above target |
+| 4 | Airtable | PM, Integrations | Direct | Safe | MAYBE | Right fit but company size concern |
+
+### [1] Stripe — Senior PM, Connect
+
+**Scanner Assessment:**
+- Match: Direct
+- Risk: Safe
+- Key signal: Core integrations match at right level
+
+**Why:** This is your integrations story at a payments company. Direct structural match on partner ecosystem work — Connect is Stripe's platform play. Level aligns with Senior PM target.
+
+**Risk detail:** SAFE PLAY — direct domain match, right level, strong company
+
+**Watch for:** Confirm this is strategy + execution, not just execution. Stripe PMs can skew toward technical execution at scale.
+
+**Relevant profile context:**
+- Matched skills: API design, partner ecosystem, platform integrations
+- Level context: Senior PM at Stripe ≈ your current Senior PM level
+- Risk appetite note: Direct match, no stretch factors — within your safe zone
+- Red flags to check: None triggered
+
+**Raw listing:**
+Title: Senior PM, Connect
+Company: Stripe
+Location: San Francisco, CA (Remote OK)
+Posted: 2026-03-20
+Source: LinkedIn
+[Full job description text here...]
+
+### [2] Oscar Health — Staff PM, Platform
+
+**Scanner Assessment:**
+- Match: Adjacent
+- Risk: Stretch
+- Key signal: Structural match, new domain (healthcare)
+
+**Why:** Your platform integration skills transfer directly. Healthcare is new but the structural match on partner ecosystems is strong. Staff title is a level up — one stretch factor.
+
+**Risk detail:** STRETCH — new domain + level up = 2 stretch factors, but structural skills are strong enough
+
+**Watch for:** Confirm "Staff" here means strategy ownership, not just senior IC. Check if healthcare domain knowledge is required or learnable on the job.
+
+**Relevant profile context:**
+- Matched skills: Platform architecture, partner ecosystem design
+- Level context: Staff PM at Oscar ≈ one level above your current Senior PM
+- Risk appetite note: You said "1 stretch factor max" — this has 2 (domain + level). Flag it.
+- Red flags to check: "Too many cooks" — Oscar has 800+ employees
+
+**Raw listing:**
+[Full job description text here...]
+
+### [4] Airtable — PM, Integrations
+**On the fence because:** Right function match but company is 800+ people, which you flagged as potential "too many cooks" risk.
+
+---
+Scanned: 4 | Evaluate: 2 | Maybe: 1 | Skipped: 1
 
 ---
 

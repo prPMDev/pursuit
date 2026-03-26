@@ -250,44 +250,6 @@ async function scrapeIndeedJobs(page, query, location, maxPages = 3) {
 
 // --- Get JD Summary for a Single Job ---
 
-// --- Noise filter — strip boilerplate before Scanner sees the JD ---
-
-const NOISE_PATTERNS = [
-  // EEO / diversity boilerplate
-  /equal\s+opportunity\s+employer/i,
-  /regardless\s+of\s+race/i,
-  /affirmative\s+action/i,
-  /\bEEO\b/,
-  /protected\s+veteran/i,
-  /reasonable\s+accommodat/i,
-  /we\s+celebrate\s+diversity/i,
-  /we\s+do\s+not\s+discriminate/i,
-  // Marketing / About Us
-  /^about\s+(us|the\s+company)/i,
-  /we\s+are\s+(a\s+)?(leading|global|innovative|fast-growing|premier)/i,
-  /join\s+our\s+(team|family|mission)/i,
-  // Generic benefits filler
-  /^(our\s+)?benefits\s*(include|:)/i,
-  /competitive\s+compensation\s+and\s+benefits/i,
-  /401\s*\(?k\)?.*dental.*vision/i,
-  // CTAs
-  /apply\s+now/i,
-  /easy\s+apply/i,
-  /click\s+(here\s+)?to\s+apply/i,
-  /submit\s+your\s+(resume|application)/i,
-  // Generic filler (never actionable)
-  /must\s+have\s+strong\s+communication\s+skills/i,
-  /ability\s+to\s+work\s+independently\s+and\s+as\s+part\s+of/i,
-  /self.motivated\s+(individual|team\s+player)/i,
-];
-
-function filterDescription(lines) {
-  return lines.filter(line => {
-    if (line.length < 5) return false;
-    return !NOISE_PATTERNS.some(p => p.test(line));
-  });
-}
-
 // --- Job detail page extraction with availability check ---
 
 async function getJobSummary(page, job) {
@@ -316,6 +278,7 @@ async function getJobSummary(page, job) {
     const pageAlive = await page.evaluate(() => {
       const text = document.body?.innerText || '';
       const deadPatterns = [
+        // Generic
         /this\s+(job|position)\s+(is\s+)?no\s+longer\s+available/i,
         /position\s+has\s+been\s+filled/i,
         /this\s+job\s+(has\s+been\s+|was\s+)?removed/i,
@@ -323,11 +286,44 @@ async function getJobSummary(page, job) {
         /sorry.*this\s+position/i,
         /no\s+longer\s+accepting\s+applications/i,
         /this\s+listing\s+has\s+closed/i,
+        /job\s+(has\s+)?closed/i,
+        /this\s+role\s+has\s+been\s+filled/i,
+        /application\s+period\s+has\s+ended/i,
+        // Greenhouse
+        /there\s+are\s+no\s+jobs\s+for\s+this/i,
+        /this\s+job\s+is\s+no\s+longer\s+open/i,
+        // Ashby
+        /this\s+position\s+is\s+closed/i,
+        /no\s+open\s+positions\s+match/i,
+        // Workday
+        /this\s+job\s+has\s+been\s+archived/i,
+        /job\s+requisition\s+.*\s+closed/i,
+        // Lever
+        /this\s+position\s+is\s+no\s+longer\s+available/i,
       ];
       for (const p of deadPatterns) {
         if (p.test(text)) return { alive: false, match: text.match(p)?.[0] || 'Job removed' };
       }
-      return { alive: true };
+
+      // Extract actual posting date from structured data
+      let postedDate = null;
+      const timeEl = document.querySelector('time[datetime]');
+      if (timeEl) postedDate = timeEl.getAttribute('datetime');
+      if (!postedDate) {
+        const metaDate = document.querySelector('meta[property="datePosted"], meta[name="datePosted"]');
+        if (metaDate) postedDate = metaDate.getAttribute('content');
+      }
+      if (!postedDate) {
+        const schema = document.querySelector('script[type="application/ld+json"]');
+        if (schema) {
+          try {
+            const data = JSON.parse(schema.textContent);
+            if (data.datePosted) postedDate = data.datePosted;
+          } catch {}
+        }
+      }
+
+      return { alive: true, postedDate };
     });
 
     if (!pageAlive.alive) {
@@ -336,6 +332,19 @@ async function getJobSummary(page, job) {
     }
 
     job.availability = { status: 'live' };
+
+    // Date-based staleness check
+    if (pageAlive.postedDate) {
+      const posted = new Date(pageAlive.postedDate);
+      if (!isNaN(posted)) {
+        const daysOld = Math.floor((Date.now() - posted) / 86400000);
+        job.postedDate = pageAlive.postedDate;
+        if (daysOld > 60) {
+          job.availability.stale = true;
+          job.availability.staleReason = `Posted ${daysOld} days ago`;
+        }
+      }
+    }
 
     // --- Extract description + metadata + extraction status ---
     const details = await page.evaluate(() => {
@@ -367,9 +376,8 @@ async function getJobSummary(page, job) {
         if (el && el.textContent.trim().length > 50) {
           const text = el.textContent.trim();
           const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-          result.rawDescription = lines.join('\n');
-          // fullDescription and summary set after noise filtering (outside evaluate)
-          result._rawLines = lines;
+          result.fullDescription = lines.join('\n');
+          result.summary = lines.slice(0, 15).join('\n');
           result.extractionStatus.description = true;
           break;
         }
@@ -424,16 +432,14 @@ async function getJobSummary(page, job) {
       return result;
     });
 
-    // Apply noise filter outside page.evaluate (NOISE_PATTERNS lives in Node)
-    const rawLines = details._rawLines || details.rawDescription.split('\n');
-    const cleanLines = filterDescription(rawLines);
-    job.rawDescription = details.rawDescription;
-    job.fullDescription = cleanLines.join('\n');
-    job.summary = cleanLines.slice(0, 15).join('\n');
+    job.fullDescription = details.fullDescription;
+    job.summary = details.summary;
     job.extractionStatus = details.extractionStatus;
-    if (Object.keys(details.metadata).length > 0) {
-      job.metadata = details.metadata;
-    }
+    // Flatten metadata onto job object (canonical field names)
+    job.salary = details.metadata.salary || '';
+    job.jobType = details.metadata.jobType || '';
+    job.experienceLevel = details.metadata.experienceLevel || '';
+    job.companySize = details.metadata.companySize || '';
   } catch (err) {
     job.availability = { status: 'error', reason: err.message || 'Page load failed' };
     job.extractionStatus = {
@@ -447,8 +453,8 @@ async function getJobSummary(page, job) {
     };
   }
 
-  // --- Staleness check from posted date ---
-  if (job.posted && /30\+\s*days?\s*ago/i.test(job.posted)) {
+  // --- Fallback staleness check from posted text (if page date check didn't run) ---
+  if (!job.availability?.stale && job.posted && /30\+\s*days?\s*ago/i.test(job.posted)) {
     if (!job.availability) job.availability = { status: 'live' };
     job.availability.stale = true;
     job.availability.staleReason = 'Posted 30+ days ago';
@@ -512,13 +518,11 @@ function formatJobsMarkdown(jobs, query) {
     lines.push(`Location: ${job.location || 'Unknown'}`);
     lines.push(`Posted: ${job.posted || 'Unknown'}`);
     lines.push(`Source: ${job.source}`);
-    // Structured metadata (if extracted from detail page)
-    if (job.metadata) {
-      if (job.metadata.salary) lines.push(`Salary: ${job.metadata.salary}`);
-      if (job.metadata.jobType) lines.push(`Type: ${job.metadata.jobType}`);
-      if (job.metadata.experienceLevel) lines.push(`Level: ${job.metadata.experienceLevel}`);
-      if (job.metadata.companySize) lines.push(`Company Size: ${job.metadata.companySize}`);
-    }
+    // Structured metadata (flat fields)
+    if (job.salary) lines.push(`Salary: ${job.salary}`);
+    if (job.jobType) lines.push(`Type: ${job.jobType}`);
+    if (job.experienceLevel) lines.push(`Level: ${job.experienceLevel}`);
+    if (job.companySize) lines.push(`Company Size: ${job.companySize}`);
     if (job.link) {
       lines.push(`Link: ${job.link}`);
     }
