@@ -1,11 +1,17 @@
 // Pursuit Dashboard — Job Detail (right panel)
-import { api, showLoading, hideLoading, injectIcons } from './app.js';
-import { statusBadge } from './icons.js';
+import { api, showLoading, hideLoading, injectIcons, health } from './app.js';
+import { icon, statusBadge } from './icons.js';
 import { refreshJobList } from './job-list.js';
+import { escapeHtml } from './util.js';
 
 let currentJob = null;
 
 export function initJobDetail() {
+  // Close detail panel
+  document.getElementById('btn-close-detail')?.addEventListener('click', () => {
+    closeDetailPanel();
+  });
+
   // Evaluate button
   document.getElementById('btn-evaluate').addEventListener('click', async () => {
     if (!currentJob) return;
@@ -49,8 +55,8 @@ export function initJobDetail() {
 }
 
 function showPipeline(status) {
-  document.getElementById('action-initial').style.display = 'none';
-  document.getElementById('action-pipeline').style.display = 'block';
+  document.getElementById('action-initial').classList.add('hidden');
+  document.getElementById('action-pipeline').classList.remove('hidden');
   updatePipelineDisplay(status);
   injectIcons(document.getElementById('action-pipeline'));
 }
@@ -80,24 +86,30 @@ async function updatePipelineStatus(status) {
   }
 }
 
+function openDetailPanel() {
+  const panel = document.getElementById('detail-panel');
+  const main = document.querySelector('.dashboard');
+  panel.classList.remove('hidden');
+  main.classList.add('detail-open');
+}
+
+function closeDetailPanel() {
+  const panel = document.getElementById('detail-panel');
+  const main = document.querySelector('.dashboard');
+  panel.classList.add('hidden');
+  main.classList.remove('detail-open');
+  currentJob = null;
+}
+
 export function showJobDetail(job) {
   currentJob = job;
 
-  document.getElementById('detail-empty').style.display = 'none';
-  document.getElementById('detail-content').style.display = 'block';
+  openDetailPanel();
+  document.getElementById('detail-content').classList.remove('hidden');
 
-  // Restore decision/pipeline state
-  if (job.decision) {
-    const statusMap = {
-      'PURSUING': 'saved', 'SAVED': 'saved', 'PASS': 'passed',
-      'APPLIED': 'applied', 'INTERVIEW': 'interview',
-      'OFFERED': 'offered', 'REJECTED': 'rejected',
-    };
-    showPipeline(statusMap[job.decision] || 'saved');
-  } else {
-    document.getElementById('action-initial').style.display = 'flex';
-    document.getElementById('action-pipeline').style.display = 'none';
-  }
+  // Reset decision/pipeline state
+  document.getElementById('action-initial').classList.remove('hidden');
+  document.getElementById('action-pipeline').classList.add('hidden');
 
   // Inject icons in action buttons
   injectIcons(document.getElementById('detail-actions-section'));
@@ -119,19 +131,19 @@ export function showJobDetail(job) {
   // Narrative
   const narrativeEl = document.getElementById('detail-narrative');
   narrativeEl.textContent = job.narrative || 'No narrative available.';
-  narrativeEl.style.display = job.narrative ? 'block' : 'none';
+  narrativeEl.classList.toggle('hidden', !job.narrative);
 
   // Risk
   const riskSection = document.getElementById('detail-risk-section');
   const riskEl = document.getElementById('detail-risk');
   if (job.riskDetail) {
     riskEl.textContent = job.riskDetail;
-    riskSection.style.display = 'block';
+    riskSection.classList.remove('hidden');
   } else if (job.risk && job.risk !== '—') {
     riskEl.textContent = job.risk;
-    riskSection.style.display = 'block';
+    riskSection.classList.remove('hidden');
   } else {
-    riskSection.style.display = 'none';
+    riskSection.classList.add('hidden');
   }
 
   // Watch for
@@ -139,9 +151,9 @@ export function showJobDetail(job) {
   const watchEl = document.getElementById('detail-watch');
   if (job.watchFor) {
     watchEl.textContent = job.watchFor;
-    watchSection.style.display = 'block';
+    watchSection.classList.remove('hidden');
   } else {
-    watchSection.style.display = 'none';
+    watchSection.classList.add('hidden');
   }
 
   // Key signal
@@ -149,9 +161,9 @@ export function showJobDetail(job) {
   const signalEl = document.getElementById('detail-signal');
   if (job.keySignal && job.keySignal !== '—') {
     signalEl.textContent = job.keySignal;
-    signalSection.style.display = 'block';
+    signalSection.classList.remove('hidden');
   } else {
-    signalSection.style.display = 'none';
+    signalSection.classList.add('hidden');
   }
 
   // Evaluator
@@ -178,6 +190,10 @@ function renderEvaluator() {
         </div>
         ${reasoning ? `<p class="narrative">${escapeHtml(reasoning)}</p>` : ''}
       </div>
+    `;
+  } else if (!health.apiKeyConfigured) {
+    container.innerHTML = `
+      <span style="font-size: 12px; color: var(--text-muted);">Evaluator requires API key — add ANTHROPIC_API_KEY to app/.env</span>
     `;
   } else {
     container.innerHTML = `
@@ -210,7 +226,11 @@ function buildEvalDescription() {
   return [
     `Company: ${currentJob.company}`,
     `Role: ${currentJob.role}`,
-    currentJob.keySignal ? `Key details: ${currentJob.keySignal}` : '',
+    currentJob.location ? `Location: ${currentJob.location}` : '',
+    currentJob.source ? `Source: ${currentJob.source}` : '',
+    currentJob.link ? `Link: ${currentJob.link}` : '',
+    currentJob.summary ? `Summary:\n${currentJob.summary}` : '',
+    currentJob.keySignal ? `Key signal: ${currentJob.keySignal}` : '',
     currentJob.narrative ? `Scanner notes: ${currentJob.narrative}` : '',
   ].filter(Boolean).join('\n');
 }
@@ -262,8 +282,3 @@ function decisionColor(decision) {
   return 'gray';
 }
 
-function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text || '';
-  return div.innerHTML;
-}

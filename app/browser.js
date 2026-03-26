@@ -42,7 +42,7 @@ function dedupeKey(company, title) {
  * Puppeteer will launch Chrome with this profile so the user
  * is already logged into LinkedIn, Indeed, etc.
  */
-function findChromeProfile() {
+export function findChromeProfile() {
   const home = homedir();
   const paths = [
     // macOS
@@ -62,7 +62,7 @@ function findChromeProfile() {
 /**
  * Find the Chrome/Chromium executable on the system.
  */
-function findChromeExecutable() {
+export function findChromeExecutable() {
   const candidates = [
     // Linux
     '/usr/bin/google-chrome',
@@ -273,7 +273,7 @@ async function getJobSummary(page, job) {
           // Get first ~500 chars as summary
           const text = el.textContent.trim();
           const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-          return lines.slice(0, 8).join('\n');
+          return lines.slice(0, 15).join('\n');
         }
       }
       return '';

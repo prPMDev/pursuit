@@ -1,11 +1,36 @@
-// Pursuit Dashboard — Job List (left panel)
-import { api, injectIcons } from './app.js';
-import { icon } from './icons.js';
+// Pursuit Dashboard — Job List (Tabulator)
+import { api } from './app.js';
 import { showJobDetail } from './job-detail.js';
 
+let table = null;
 let allJobs = [];
 let currentFilter = 'all';
-let selectedJobId = null;
+
+function badgeFormatter(cell) {
+  const val = cell.getValue() || 'Unscanned';
+  const cls = val.toLowerCase();
+  return `<span class="status-badge ${cls}">${val}</span>`;
+}
+
+function riskFormatter(cell) {
+  const val = cell.getValue();
+  if (!val || val === '—') return '';
+  return `<span class="risk-badge ${val.toLowerCase()}">${val}</span>`;
+}
+
+function dateFormatter(cell) {
+  const val = cell.getValue();
+  if (!val) return '';
+  // Show compact date
+  const d = new Date(val);
+  if (isNaN(d)) return val;
+  const now = new Date();
+  const diff = Math.floor((now - d) / 86400000);
+  if (diff === 0) return 'Today';
+  if (diff === 1) return 'Yesterday';
+  if (diff < 7) return `${diff}d ago`;
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
 
 export function initJobList() {
   // Filter buttons
@@ -14,89 +39,96 @@ export function initJobList() {
       document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       currentFilter = btn.dataset.filter;
-      renderJobList();
+      applyFilter();
     });
   });
+
+  // Initialize Tabulator
+  table = new Tabulator('#job-list-table', {
+    data: [],
+    layout: 'fitColumns',
+    height: '100%',
+    placeholder: '<div class="empty-state"><p class="empty-title">No jobs yet</p><p class="empty-body">Click <strong>Fetch Jobs</strong> or <strong>Add Jobs</strong> to get started.</p></div>',
+    selectable: 1,
+    columns: [
+      {
+        title: 'Company',
+        field: 'company',
+        minWidth: 100,
+        widthGrow: 1,
+        cssClass: 'cell-company',
+      },
+      {
+        title: 'Role',
+        field: 'role',
+        minWidth: 160,
+        widthGrow: 2,
+        cssClass: 'cell-role',
+      },
+      {
+        title: 'Action',
+        field: 'action',
+        width: 95,
+        formatter: badgeFormatter,
+        hozAlign: 'center',
+      },
+      {
+        title: 'Risk',
+        field: 'risk',
+        width: 75,
+        formatter: riskFormatter,
+        hozAlign: 'center',
+      },
+      {
+        title: 'Source',
+        field: 'source',
+        width: 80,
+        cssClass: 'cell-muted',
+      },
+      {
+        title: 'Date',
+        field: 'date',
+        width: 85,
+        formatter: dateFormatter,
+        sorter: 'date',
+        hozAlign: 'right',
+        cssClass: 'cell-muted',
+      },
+    ],
+    initialSort: [{ column: 'date', dir: 'desc' }],
+    rowHeight: 42,
+  });
+
+  table.on('rowClick', (e, row) => {
+    const job = row.getData();
+    if (job) showJobDetail(job);
+  });
+}
+
+function applyFilter() {
+  if (!table) return;
+
+  if (currentFilter === 'all') {
+    table.clearFilter();
+  } else if (currentFilter === 'pursuing') {
+    table.setFilter((data) => data.decision === 'pursue' || data.pipelineStatus === 'pursuing');
+  } else if (currentFilter === 'applied') {
+    table.setFilter((data) => data.pipelineStatus === 'applied' || data.pipelineStatus === 'interview' || data.pipelineStatus === 'offered');
+  } else {
+    table.setFilter('action', '=', currentFilter);
+  }
 }
 
 export async function refreshJobList() {
   try {
     const { jobs } = await api('/jobs');
     allJobs = jobs || [];
-    renderJobList();
+
+    if (table) {
+      table.replaceData(allJobs);
+      applyFilter();
+    }
   } catch (err) {
     console.error('Failed to load jobs:', err);
   }
-}
-
-function renderJobList() {
-  const container = document.getElementById('job-list');
-  const emptyState = document.getElementById('empty-state');
-
-  const filtered = currentFilter === 'all'
-    ? allJobs
-    : currentFilter === 'pursuing'
-    ? allJobs.filter(j => j.decision && ['PURSUING', 'SAVED'].includes(j.decision))
-    : currentFilter === 'applied'
-    ? allJobs.filter(j => j.decision && ['APPLIED', 'INTERVIEW', 'OFFERED'].includes(j.decision))
-    : allJobs.filter(j => j.action === currentFilter);
-
-  if (filtered.length === 0) {
-    container.innerHTML = '';
-    container.appendChild(emptyState);
-    emptyState.style.display = 'block';
-    return;
-  }
-
-  emptyState.style.display = 'none';
-
-  container.innerHTML = filtered.map(job => {
-    const action = (job.action || 'unscanned').toLowerCase();
-    const isActive = job.id === selectedJobId;
-
-    // Icon + color for action status
-    const statusIcon = action === 'evaluate' ? icon('check-circle', 14, 'status-icon-green')
-      : action === 'maybe' ? icon('help-circle', 14, 'status-icon-amber')
-      : action === 'skip' ? icon('x-circle', 14, 'status-icon-gray')
-      : icon('circle-dot', 14, 'status-icon-light');
-
-    const riskBadge = job.risk && job.risk !== '—'
-      ? `<span class="risk-badge ${job.risk.toLowerCase()}">${job.risk}</span>`
-      : '';
-
-    return `
-      <div class="job-card ${isActive ? 'active' : ''}" data-job-id="${job.id}" data-action="${job.action || ''}">
-        <div class="job-card-company">${escapeHtml(job.company)}</div>
-        <div class="job-card-role">${escapeHtml(job.role)}</div>
-        <div class="job-card-meta">
-          ${statusIcon}
-          <span>${job.action || 'Unscanned'}</span>
-          ${riskBadge}
-          <span class="job-card-source">${job.source || ''} · ${job.date || ''}</span>
-        </div>
-      </div>
-    `;
-  }).join('');
-
-  // Click handlers
-  container.querySelectorAll('.job-card').forEach(card => {
-    card.addEventListener('click', () => {
-      const jobId = card.dataset.jobId;
-      selectedJobId = jobId;
-
-      // Update active state
-      container.querySelectorAll('.job-card').forEach(c => c.classList.remove('active'));
-      card.classList.add('active');
-
-      // Show detail
-      const job = allJobs.find(j => j.id === jobId);
-      if (job) showJobDetail(job);
-    });
-  });
-}
-
-function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text || '';
-  return div.innerHTML;
 }

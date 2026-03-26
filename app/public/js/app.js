@@ -1,13 +1,22 @@
 // Pursuit Dashboard — Main controller
+import { renderTopbar } from './topbar.js';
 import { initJobList, refreshJobList } from './job-list.js';
 import { initJobDetail } from './job-detail.js';
-import { initProfile } from './profile.js';
-import { initSettings } from './settings.js';
-import { checkSetupNeeded, showSetup, initSetup } from './setup.js';
+import { renderProfileModal, initProfile } from './profile.js';
+import { renderSettingsModal, initSettings } from './settings.js';
+import { renderSetupOverlay, checkSetupNeeded, showSetup, initSetup } from './setup.js';
+import { renderAddJobsModal, initAddJobs } from './add-jobs.js';
 import { icon } from './icons.js';
+import { html } from './util.js';
+
+// --- Health state (checked once at startup, modules read this) ---
+
+export const health = {
+  apiKeyConfigured: false,
+  chromeFound: false,
+};
 
 // --- Icon Injection ---
-// Replace all [data-icon] elements with inline SVGs on load
 
 export function injectIcons(root = document) {
   root.querySelectorAll('[data-icon]').forEach(el => {
@@ -32,77 +41,32 @@ export async function api(path, options = {}) {
 
 export function showLoading(text = 'Working...') {
   document.getElementById('loading-text').textContent = text;
-  document.getElementById('loading').style.display = 'flex';
+  document.getElementById('loading').classList.remove('hidden');
 }
 
 export function hideLoading() {
-  document.getElementById('loading').style.display = 'none';
+  document.getElementById('loading').classList.add('hidden');
 }
 
-export function showModal(id) {
-  document.getElementById(id).style.display = 'flex';
+// Legacy modal helpers (re-exported from modal.js for backwards compat)
+export { showModal, hideModal } from './modal.js';
+
+// --- Render Loading Overlay ---
+
+function renderLoadingOverlay() {
+  const container = document.getElementById('overlay-container');
+  const el = document.createElement('div');
+  el.className = 'loading-overlay hidden';
+  el.id = 'loading';
+  el.innerHTML = html`
+    <div class="loading-content">
+      <div class="spinner"></div>
+      <p id="loading-text">Scanning...</p>
+      <p class="loading-hint">Quality gate, not collector.</p>
+    </div>
+  `;
+  container.appendChild(el);
 }
-
-export function hideModal(id) {
-  document.getElementById(id).style.display = 'none';
-}
-
-// --- Modal close handlers ---
-
-document.querySelectorAll('.modal-close, [data-modal]').forEach(el => {
-  el.addEventListener('click', (e) => {
-    const modalId = el.dataset.modal;
-    if (modalId) hideModal(modalId);
-  });
-});
-
-// Close modal on backdrop click
-document.querySelectorAll('.modal').forEach(modal => {
-  modal.addEventListener('click', (e) => {
-    if (e.target === modal) modal.style.display = 'none';
-  });
-});
-
-// --- Add Jobs ---
-
-document.getElementById('btn-add-jobs').addEventListener('click', () => {
-  showModal('modal-add-jobs');
-  document.getElementById('input-listings').focus();
-});
-
-document.getElementById('btn-submit-listings').addEventListener('click', async () => {
-  const listings = document.getElementById('input-listings').value.trim();
-  if (!listings) return;
-
-  hideModal('modal-add-jobs');
-  showLoading('Scanning listings against your profile...');
-
-  try {
-    const result = await api('/scan', {
-      method: 'POST',
-      body: { listings },
-    });
-
-    document.getElementById('input-listings').value = '';
-    await refreshJobList();
-    hideLoading();
-
-    // Show stats
-    if (result.stats) {
-      const msg = `Scanned: ${result.stats.scanned} | Evaluate: ${result.stats.evaluate} | Maybe: ${result.stats.maybe} | Skipped: ${result.stats.skipped}`;
-      console.log(msg);
-    }
-  } catch (err) {
-    hideLoading();
-    alert(`Scan failed: ${err.message}`);
-  }
-});
-
-// Scan button (scans any unscanned jobs)
-document.getElementById('btn-scan').addEventListener('click', () => {
-  showModal('modal-add-jobs');
-  document.getElementById('input-listings').focus();
-});
 
 // --- Profile Strip ---
 
@@ -115,11 +79,9 @@ export async function updateProfileStrip() {
       return;
     }
 
-    // Extract key info from profile for the strip
     const lines = content.split('\n');
     const parts = [];
 
-    // Look for key fields
     for (const line of lines) {
       if (line.match(/^\*\*Years of experience:\*\*/)) {
         const val = line.replace(/\*\*/g, '').replace('Years of experience:', '').trim();
@@ -149,26 +111,57 @@ export async function updateProfileStrip() {
 // --- Init ---
 
 async function init() {
-  // Check health
+  // Phase 1: Render all components into mount points
+  renderTopbar();
+  renderLoadingOverlay();
+  renderSetupOverlay();
+  renderAddJobsModal();
+  renderProfileModal();
+  renderSettingsModal();
+
+  // Phase 2: Check health
   try {
-    const health = await api('/health');
+    const result = await api('/health');
+    health.apiKeyConfigured = result.apiKeyConfigured;
+    health.chromeFound = result.chromeFound;
+
+    const fetchBtn = document.getElementById('btn-fetch-now');
+    const scanBtn = document.getElementById('btn-scan');
+    const statusEl = document.getElementById('fetch-status');
+
+    function disableBtn(btn, title) {
+      if (!btn) return;
+      btn.disabled = true;
+      btn.style.opacity = '0.5';
+      btn.title = title;
+    }
+
     if (!health.apiKeyConfigured) {
-      document.getElementById('fetch-status').textContent = '⚠ No API key';
+      statusEl.textContent = '\u26A0 No API key — add to app/.env';
+      disableBtn(scanBtn, 'API key required. Add ANTHROPIC_API_KEY to app/.env');
+    }
+    if (!health.chromeFound) {
+      if (!statusEl.textContent) statusEl.textContent = '\u26A0 No Chrome found';
+      disableBtn(fetchBtn, 'Chrome/Chromium not installed. Install it or set CHROME_PATH in .env. Add Jobs still works.');
     }
   } catch (err) {
     console.error('Health check failed:', err);
   }
 
+  // Phase 3: Init all modules (bind event listeners)
   initJobList();
   initJobDetail();
+  initAddJobs();
   initProfile();
   initSettings();
   initSetup();
   injectIcons();
 
-  // Check if first-time setup is needed
+  // Phase 4: Check if first-time setup is needed
   const needsSetup = await checkSetupNeeded();
   if (needsSetup) {
+    // Hide dashboard — overlay takes full screen
+    document.querySelector('main').classList.add('hidden');
     showSetup();
   } else {
     updateProfileStrip();
