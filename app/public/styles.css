@@ -439,6 +439,32 @@ body {
   color: var(--text-light);
 }
 
+.detail-listing-grid {
+  display: grid;
+  grid-template-columns: 100px 1fr;
+  gap: 4px 12px;
+  font-size: 13px;
+}
+
+.detail-listing-grid dt {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.detail-listing-grid dd {
+  color: var(--text);
+}
+
+.detail-listing-link {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--blue);
+  text-decoration: none;
+}
+
+.detail-listing-link:hover { text-decoration: underline; }
+
 .detail-section {
   margin-bottom: 24px;
 }

@@ -145,13 +145,44 @@ export function showJobDetail(job) {
     missingEl.classList.add('hidden');
   }
 
-  // Header
+  // Header — show source + location + job type inline
   document.getElementById('detail-company').textContent = job.company || 'Unknown';
   document.getElementById('detail-role').textContent = job.role || 'Unknown Role';
   document.getElementById('detail-meta').textContent = [
     job.source,
-    job.date ? `Posted: ${job.date}` : null,
+    job.location,
+    job.jobType,
   ].filter(Boolean).join(' · ');
+
+  // Listing details grid
+  const listingGrid = document.getElementById('detail-listing');
+  const listingSection = document.getElementById('detail-listing-section');
+  const listingFields = [
+    job.salary ? ['Salary', job.salary] : null,
+    job.posted ? ['Posted', job.posted] : null,
+    job.experienceLevel ? ['Level', job.experienceLevel] : null,
+    job.companySize ? ['Company size', job.companySize] : null,
+    job.location ? ['Location', job.location] : null,
+    job.jobType ? ['Type', job.jobType] : null,
+  ].filter(Boolean);
+
+  if (listingFields.length > 0) {
+    listingGrid.innerHTML = listingFields.map(([label, value]) =>
+      `<dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd>`
+    ).join('');
+    listingSection.classList.remove('hidden');
+  } else {
+    listingSection.classList.add('hidden');
+  }
+
+  // Original listing link
+  const linkEl = document.getElementById('detail-link');
+  if (job.link) {
+    linkEl.href = job.link;
+    linkEl.classList.remove('hidden');
+  } else {
+    linkEl.classList.add('hidden');
+  }
 
   // Tags + Narrative — hide scanner section entirely for unscanned jobs
   const tagsContainer = document.getElementById('detail-tags');
