@@ -6,6 +6,113 @@ import { TagInput } from './tag-input.js';
 let taxonomies = { titles: [], industries: [], domains: [] };
 let tagInputs = {};
 
+const SAMPLE_PROFILES = [
+  {
+    label: 'Product Manager',
+    profile: {
+      identity: 'I build and scale B2B products by connecting customer needs to business outcomes.',
+      role: 'Product Manager',
+      level: 'Senior',
+      targetLevel: 'Staff PM',
+      years: '8',
+      yearsInRole: '5',
+      prevRoles: 'Business Analyst, Management Consultant',
+      compMin: '$180k',
+      compMax: '$230k',
+      compFlexible: true,
+      location: 'San Francisco Bay Area',
+      workStyle: ['remote', 'hybrid'],
+      nonneg: 'Must support visa sponsorship\nNo defense/weapons companies\nSeries A+ only',
+    },
+    search: {
+      titles: ['Product Manager', 'Senior Product Manager', 'Staff Product Manager', 'Director of Product'],
+      industries: ['SaaS', 'Fintech', 'Enterprise Software'],
+      domains: ['Platform', 'Integrations', 'Developer Tools', 'Payments'],
+      titlesFlex: 2, industriesFlex: 2, domainsFlex: 3,
+      levels: ['senior', 'lead'],
+      companySize: ['growth', 'enterprise'],
+    },
+  },
+  {
+    label: 'Software Engineer',
+    profile: {
+      identity: 'I design and build distributed systems that handle millions of requests per day.',
+      role: 'Software Engineer',
+      level: 'Senior',
+      targetLevel: 'Staff Engineer',
+      years: '6',
+      yearsInRole: '6',
+      prevRoles: '',
+      compMin: '$200k',
+      compMax: '$280k',
+      compFlexible: true,
+      location: 'Seattle, WA',
+      workStyle: ['remote'],
+      nonneg: 'Must be fully remote\nNo on-call rotation > 1 week/month',
+    },
+    search: {
+      titles: ['Software Engineer', 'Senior Software Engineer', 'Staff Engineer', 'Backend Engineer'],
+      industries: ['Cloud Infrastructure', 'SaaS', 'AI/ML'],
+      domains: ['Distributed Systems', 'Backend', 'Platform Engineering', 'Data Infrastructure'],
+      titlesFlex: 2, industriesFlex: 3, domainsFlex: 2,
+      levels: ['senior', 'lead'],
+      companySize: ['growth', 'enterprise'],
+    },
+  },
+  {
+    label: 'Data Scientist',
+    profile: {
+      identity: 'I turn messy data into actionable insights that drive product and business decisions.',
+      role: 'Data Scientist',
+      level: 'Senior',
+      targetLevel: 'Lead',
+      years: '7',
+      yearsInRole: '4',
+      prevRoles: 'Data Analyst, Statistician, Research Scientist',
+      compMin: '$170k',
+      compMax: '$240k',
+      compFlexible: false,
+      location: 'New York, NY',
+      workStyle: ['hybrid', 'remote'],
+      nonneg: 'Must have meaningful ML/AI work\nNo pure dashboarding roles',
+    },
+    search: {
+      titles: ['Data Scientist', 'Senior Data Scientist', 'ML Engineer', 'Applied Scientist'],
+      industries: ['Healthcare', 'Fintech', 'E-commerce', 'AI/ML'],
+      domains: ['Machine Learning', 'NLP', 'Experimentation', 'Recommendation Systems'],
+      titlesFlex: 2, industriesFlex: 3, domainsFlex: 2,
+      levels: ['senior', 'lead'],
+      companySize: ['startup', 'growth'],
+    },
+  },
+  {
+    label: 'UX Designer',
+    profile: {
+      identity: 'I craft intuitive enterprise experiences by bridging user research with systems thinking.',
+      role: 'UX Designer',
+      level: 'Lead',
+      targetLevel: 'Director of Design',
+      years: '10',
+      yearsInRole: '7',
+      prevRoles: 'Graphic Designer, UI Developer, Product Designer',
+      compMin: '$160k',
+      compMax: '$210k',
+      compFlexible: true,
+      location: 'Austin, TX',
+      workStyle: ['hybrid', 'onsite'],
+      nonneg: 'Must have a design team to lead\nNo agencies',
+    },
+    search: {
+      titles: ['UX Designer', 'Senior UX Designer', 'Lead Designer', 'Head of Design'],
+      industries: ['Enterprise Software', 'SaaS', 'Healthcare'],
+      domains: ['Design Systems', 'UX Research', 'Interaction Design', 'Accessibility'],
+      titlesFlex: 2, industriesFlex: 2, domainsFlex: 3,
+      levels: ['lead', 'director'],
+      companySize: ['growth', 'enterprise'],
+    },
+  },
+];
+
 export function renderSetupOverlay() {
   const container = document.getElementById('overlay-container');
   const el = document.createElement('div');
@@ -16,6 +123,10 @@ export function renderSetupOverlay() {
       <div class="setup-header">
         <h2>Welcome to Pursuit</h2>
         <p class="setup-subtitle">Let's set up your profile and search preferences. Takes about 2 minutes.</p>
+        <div class="setup-samples">
+          <span class="setup-samples-label">Quick start with a sample:</span>
+          ${SAMPLE_PROFILES.map((p, i) => `<button class="btn btn-sample" data-sample="${i}">${p.label}</button>`).join('')}
+        </div>
       </div>
 
       <div class="setup-tabs">
@@ -240,6 +351,53 @@ async function initTagInputs() {
   updateFlexLabel('setup-domains-flex', 'setup-domains-flex-label');
 }
 
+function fillSampleProfile(index) {
+  const sample = SAMPLE_PROFILES[index];
+  if (!sample) return;
+  const p = sample.profile;
+  const s = sample.search;
+
+  // Profile tab fields
+  document.getElementById('setup-identity').value = p.identity;
+  document.getElementById('setup-role').value = p.role;
+  document.getElementById('setup-level').value = p.level;
+  document.getElementById('setup-target-level').value = p.targetLevel;
+  document.getElementById('setup-years').value = p.years;
+  document.getElementById('setup-years-role').value = p.yearsInRole;
+  document.getElementById('setup-prev-roles').value = p.prevRoles;
+  document.getElementById('setup-comp-min').value = p.compMin;
+  document.getElementById('setup-comp-max').value = p.compMax;
+  document.getElementById('setup-comp-flexible').checked = p.compFlexible;
+  document.getElementById('setup-location').value = p.location;
+  document.getElementById('setup-nonneg').value = p.nonneg;
+
+  // Work style checkboxes
+  document.getElementById('setup-remote').checked = p.workStyle.includes('remote');
+  document.getElementById('setup-hybrid').checked = p.workStyle.includes('hybrid');
+  document.getElementById('setup-onsite').checked = p.workStyle.includes('onsite');
+
+  // Search tab — tag inputs
+  if (tagInputs.titles) tagInputs.titles.setValue(s.titles);
+  if (tagInputs.industries) tagInputs.industries.setValue(s.industries);
+  if (tagInputs.domains) tagInputs.domains.setValue(s.domains);
+
+  // Flexibility sliders
+  const setSlider = (id, val) => { const el = document.getElementById(id); if (el) { el.value = val; el.dispatchEvent(new Event('sl-input')); } };
+  setSlider('setup-titles-flex', s.titlesFlex);
+  setSlider('setup-industries-flex', s.industriesFlex);
+  setSlider('setup-domains-flex', s.domainsFlex);
+
+  // Level checkboxes
+  document.querySelectorAll('[name="setup-levels"]').forEach(el => { el.checked = s.levels.includes(el.value); });
+  // Company size checkboxes
+  document.querySelectorAll('[name="setup-company-size"]').forEach(el => { el.checked = s.companySize.includes(el.value); });
+
+  // Highlight active sample button
+  document.querySelectorAll('.btn-sample').forEach((btn, i) => {
+    btn.classList.toggle('active', i === index);
+  });
+}
+
 function switchTab(tabName) {
   // Update tab buttons
   document.querySelectorAll('.setup-tab').forEach(t => t.classList.remove('active'));
@@ -458,6 +616,11 @@ export function initSetup() {
   document.getElementById('setup-to-confirm')?.addEventListener('click', () => switchTab('confirm'));
   document.getElementById('setup-back-profile')?.addEventListener('click', () => switchTab('profile'));
   document.getElementById('setup-back-search')?.addEventListener('click', () => switchTab('search'));
+
+  // Sample profile buttons
+  document.querySelectorAll('.btn-sample').forEach(btn => {
+    btn.addEventListener('click', () => fillSampleProfile(parseInt(btn.dataset.sample)));
+  });
 
   // Complete
   document.getElementById('setup-complete')?.addEventListener('click', completeSetup);
