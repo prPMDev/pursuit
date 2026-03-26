@@ -124,7 +124,7 @@ function parseRawJobListings(markdown) {
     const company = get('Company');
     if (!title || !company) continue;
 
-    jobs.push({
+    const job = {
       title,
       company,
       location: get('Location'),
@@ -132,7 +132,37 @@ function parseRawJobListings(markdown) {
       source: get('Source'),
       summary: get('Summary'),
       link: get('Link'),
-    });
+      salary: get('Salary'),
+      jobType: get('Type'),
+      experienceLevel: get('Level'),
+      companySize: get('Company Size'),
+    };
+
+    // Parse availability field
+    const avail = get('Availability');
+    if (avail) {
+      const status = avail.split(' — ')[0].trim();
+      job.availability = { status };
+      if (avail.includes('stale')) job.availability.stale = true;
+      if (avail.includes(' — ')) job.availability.reason = avail.split(' — ').slice(1).join(' — ');
+    }
+
+    // Parse extraction status
+    const extraction = get('Extraction');
+    if (extraction) {
+      job.extractionStatus = {};
+      for (const pair of extraction.replace(/\(.*\)/, '').split(',')) {
+        const [key, val] = pair.trim().split('=');
+        if (key && val) job.extractionStatus[key.trim()] = val.trim() === 'yes';
+      }
+      if (extraction.includes('FAILED')) job.extractionStatus.failed = true;
+    }
+
+    // Parse full description (multi-line block after "Full Description:")
+    const descMatch = block.match(/Full Description:\n([\s\S]+?)$/);
+    if (descMatch) job.fullDescription = descMatch[1].trim();
+
+    jobs.push(job);
   }
   return jobs;
 }
@@ -305,9 +335,23 @@ app.get('/api/jobs', async (req, res) => {
           job.location = raw.location || '';
           job.link = raw.link || '';
           job.summary = raw.summary || '';
+          job.fullDescription = raw.fullDescription || '';
           job.source = raw.source || '';
           job.posted = raw.posted || '';
+          job.salary = raw.salary || '';
+          job.jobType = raw.jobType || '';
+          job.experienceLevel = raw.experienceLevel || '';
+          job.companySize = raw.companySize || '';
+          if (raw.availability) job.availability = raw.availability;
+          if (raw.extractionStatus) job.extractionStatus = raw.extractionStatus;
         }
+
+        // Compute missing fields for UI
+        job.missingFields = [];
+        if (!job.fullDescription && !job.summary && !job.narrative) job.missingFields.push('description');
+        if (!job.salary) job.missingFields.push('salary');
+        if (!job.location) job.missingFields.push('location');
+        if (!job.link) job.missingFields.push('link');
         if (!job.source) {
           job.source = file.includes('indeed') ? 'Indeed' : file.includes('linkedin') ? 'LinkedIn' : 'Manual';
         }
@@ -325,6 +369,12 @@ app.get('/api/jobs', async (req, res) => {
     const scannedIds = new Set(allJobs.map(j => j.id));
     for (const [id, raw] of Object.entries(rawJobIndex)) {
       if (scannedIds.has(id)) continue;
+      const missingFields = [];
+      if (!raw.fullDescription && !raw.summary) missingFields.push('description');
+      if (!raw.salary) missingFields.push('salary');
+      if (!raw.location) missingFields.push('location');
+      if (!raw.link) missingFields.push('link');
+
       allJobs.push({
         id,
         company: raw.company,
@@ -332,12 +382,20 @@ app.get('/api/jobs', async (req, res) => {
         location: raw.location || '',
         link: raw.link || '',
         summary: raw.summary || '',
+        fullDescription: raw.fullDescription || '',
         source: raw.source || '',
         posted: raw.posted || '',
+        salary: raw.salary || '',
+        jobType: raw.jobType || '',
+        experienceLevel: raw.experienceLevel || '',
+        companySize: raw.companySize || '',
         date: '',
         action: '',
         tags: [],
         hasEvaluation: false,
+        availability: raw.availability || null,
+        extractionStatus: raw.extractionStatus || null,
+        missingFields,
       });
     }
 
@@ -964,11 +1022,15 @@ app.post('/api/fetch-and-scan', async (req, res) => {
 
     fetchInProgress = false;
 
-    if (result.totalFetched === 0) {
-      return res.json({ ok: true, totalFetched: 0, message: 'No new jobs found.' });
+    // Filter out dead jobs before scanning
+    const liveJobs = result.newJobs.filter(j => j.availability?.status !== 'dead');
+    const deadCount = result.newJobs.length - liveJobs.length;
+
+    if (liveJobs.length === 0) {
+      return res.json({ ok: true, totalFetched: result.totalFetched, deadFiltered: deadCount, message: deadCount > 0 ? `Found ${result.totalFetched} jobs but all appear expired.` : 'No new jobs found.' });
     }
 
-    // Step 2: Read the fetched jobs and scan them
+    // Step 2: Read the fetched jobs and scan them (dead jobs stay in files for audit)
     let allListings = '';
     for (const file of result.files) {
       const content = await readFile(join(DATA, 'jobs', file), 'utf-8');

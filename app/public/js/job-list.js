@@ -97,6 +97,15 @@ export function initJobList() {
     ],
     initialSort: [{ column: 'date', dir: 'desc' }],
     rowHeight: 42,
+    rowFormatter: (row) => {
+      const data = row.getData();
+      if (data.availability?.status === 'dead') {
+        row.getElement().style.opacity = '0.4';
+        row.getElement().style.textDecoration = 'line-through';
+      } else if (data.availability?.stale) {
+        row.getElement().style.opacity = '0.7';
+      }
+    },
   });
 
   table.on('rowClick', (e, row) => {

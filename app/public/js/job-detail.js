@@ -114,6 +114,30 @@ export function showJobDetail(job) {
   // Inject icons in action buttons
   injectIcons(document.getElementById('detail-actions-section'));
 
+  // Availability banner
+  const availEl = document.getElementById('detail-availability');
+  if (job.availability?.status === 'dead') {
+    availEl.className = 'availability-banner availability-dead';
+    availEl.textContent = `This job appears to be no longer available${job.availability.reason ? ` (${job.availability.reason})` : ''}`;
+    availEl.classList.remove('hidden');
+  } else if (job.availability?.stale) {
+    availEl.className = 'availability-banner availability-stale';
+    availEl.textContent = 'This listing may be stale — posted 30+ days ago';
+    availEl.classList.remove('hidden');
+  } else {
+    availEl.classList.add('hidden');
+  }
+
+  // Missing data indicator
+  const missingEl = document.getElementById('detail-missing');
+  if (job.missingFields?.length > 0) {
+    missingEl.className = 'missing-indicator';
+    missingEl.textContent = `Missing: ${job.missingFields.join(', ')}`;
+    missingEl.classList.remove('hidden');
+  } else {
+    missingEl.classList.add('hidden');
+  }
+
   // Header
   document.getElementById('detail-company').textContent = job.company || 'Unknown';
   document.getElementById('detail-role').textContent = job.role || 'Unknown Role';
