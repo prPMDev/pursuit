@@ -12,6 +12,9 @@ const ROOT = resolve(__dirname, '..');
 const DATA = join(ROOT, 'data');
 const SCANNER_PROMPT = join(ROOT, 'scanner', 'scanner-prompt.md');
 const EVALUATOR_PROMPT = join(ROOT, 'evaluator', 'HLL-job-eval-prompt.md');
+const EVALUATOR_SYSTEM = join(ROOT, 'evaluator', 'system.md');
+const EVALUATOR_INITIAL = join(ROOT, 'evaluator', 'initial-eval.md');
+const EVALUATOR_FOLLOWUP = join(ROOT, 'evaluator', 'follow-up.md');
 const PROFILE_TEMPLATE = join(ROOT, 'scanner', 'my-profile-template.md');
 
 const app = express();
@@ -424,33 +427,105 @@ app.post('/api/scan', async (req, res) => {
     await writeFile(join(DATA, 'scans', finalName), result);
 
     const parsed = parseScannerOutput(result);
+
+    // Write dossier files for EVALUATE jobs (handoff to Evaluator)
+    await mkdir(join(DATA, 'scans', 'dossiers'), { recursive: true });
+    for (const job of (parsed.jobs || [])) {
+      if (job.action && job.action.toUpperCase() === 'EVALUATE') {
+        const slug = `${(job.company || 'unknown').toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${(job.role || 'unknown').toLowerCase().replace(/[^a-z0-9]+/g, '-')}`.slice(0, 80);
+        const dossierContent = [
+          `# Dossier: ${job.company} — ${job.role}`,
+          '',
+          '## Scanner Assessment',
+          `- Match: ${job.matchType || 'Unknown'}`,
+          `- Risk: ${job.risk || 'Unknown'}`,
+          `- Action: EVALUATE`,
+          `- Key signal: ${job.keySignal || '—'}`,
+          `- Watch for: ${job.watchFor || '—'}`,
+          `- Narrative: ${job.narrative || '—'}`,
+          job.riskDetail ? `- Risk detail: ${job.riskDetail}` : '',
+          '',
+          '## Profile Context',
+          `- Matched from profile scan on ${datePrefix()}`,
+          '',
+          '## Raw Listing',
+          job.rawListing || `Company: ${job.company}\nRole: ${job.role}\nSource: ${job.source || '—'}\nDate: ${job.date || '—'}`,
+        ].filter(Boolean).join('\n');
+
+        await writeFile(join(DATA, 'scans', 'dossiers', `${slug}.md`), dossierContent);
+        job.dossierFile = `${slug}.md`;
+      }
+    }
+
     res.json({ filename: finalName, ...parsed });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// Evaluate — run evaluator on a specific job
+// Evaluate — run evaluator on a specific job (reads dossier + modular prompts)
 app.post('/api/evaluate/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { jobDescription } = req.body;
+    const { jobDescription, dossierFile } = req.body;
 
     const profile = await readMarkdown(join(DATA, 'profile.md'));
     if (!profile) return res.status(400).json({ error: 'Profile not set' });
 
-    const evalPrompt = await readMarkdown(EVALUATOR_PROMPT);
-    if (!evalPrompt) return res.status(500).json({ error: 'Evaluator prompt not found' });
+    // Compose system prompt from modular parts
+    const systemParts = [
+      await readMarkdown(EVALUATOR_SYSTEM),
+      await readMarkdown(EVALUATOR_INITIAL),
+    ].filter(Boolean);
+    const systemPrompt = systemParts.length > 0
+      ? systemParts.join('\n\n---\n\n')
+      : await readMarkdown(EVALUATOR_PROMPT); // fallback to legacy prompt
 
-    const userMessage = profile
-      ? `## My Background\n\n${profile}\n\n## Job Description\n\n${jobDescription || `Job ID: ${id}`}`
-      : jobDescription || `Please evaluate the job with ID: ${id}`;
-    const result = await callClaude(evalPrompt, userMessage);
+    // Build user message with profile + learned profile + dossier
+    const learnedProfile = await readMarkdown(join(DATA, 'learned-profile.md'));
+    let dossier = null;
+    if (dossierFile) {
+      dossier = await readMarkdown(join(DATA, 'scans', 'dossiers', dossierFile));
+    }
+
+    const userParts = [
+      `## My Profile\n\n${profile}`,
+      learnedProfile ? `## Learned Profile (from past decisions)\n\n${learnedProfile}` : '',
+      dossier ? `## Scanner Dossier\n\n${dossier}` : '',
+      jobDescription ? `## Job Description\n\n${jobDescription}` : '',
+    ].filter(Boolean);
+
+    const result = await callClaude(systemPrompt, userParts.join('\n\n'));
 
     const filename = `${datePrefix()}-${id}.md`;
     await writeFile(join(DATA, 'evaluations', filename), result);
 
     res.json({ filename, result });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Follow-up — user asks a specific question about a previous evaluation
+app.post('/api/evaluate/:id/follow-up', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { question, previousEvaluation } = req.body;
+    if (!question) return res.status(400).json({ error: 'Question required' });
+
+    const systemParts = [
+      await readMarkdown(EVALUATOR_SYSTEM),
+      await readMarkdown(EVALUATOR_FOLLOWUP),
+    ].filter(Boolean);
+    const systemPrompt = systemParts.join('\n\n---\n\n');
+
+    const userMessage = [
+      `## Previous Evaluation\n\n${previousEvaluation || 'No previous evaluation available.'}`,
+      `## My Question\n\n${question}`,
+    ].join('\n\n');
+
+    const result = await callClaude(systemPrompt, userMessage);
+    res.json({ result });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
