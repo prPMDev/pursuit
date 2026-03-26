@@ -12,6 +12,9 @@ const ROOT = resolve(__dirname, '..');
 const DATA = join(ROOT, 'data');
 const SCANNER_PROMPT = join(ROOT, 'scanner', 'scanner-prompt.md');
 const EVALUATOR_PROMPT = join(ROOT, 'evaluator', 'HLL-job-eval-prompt.md');
+const EVALUATOR_SYSTEM = join(ROOT, 'evaluator', 'system.md');
+const EVALUATOR_INITIAL = join(ROOT, 'evaluator', 'initial-eval.md');
+const EVALUATOR_FOLLOWUP = join(ROOT, 'evaluator', 'follow-up.md');
 const PROFILE_TEMPLATE = join(ROOT, 'scanner', 'my-profile-template.md');
 
 const app = express();
@@ -55,12 +58,74 @@ async function readMarkdown(filepath) {
 }
 
 function jobId(company, title) {
-  const raw = `${company}-${title}`.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-  return raw.substring(0, 60);
+  // Must match browser.js dedupeKey() — MD5 of "company|title"
+  const raw = `${company}|${title}`.toLowerCase().trim();
+  return createHash('md5').update(raw).digest('hex').substring(0, 12);
 }
+
+const DOSSIERS_DIR = join(DATA, 'dossiers');
 
 function datePrefix() {
   return new Date().toISOString().split('T')[0];
+}
+
+// --- Dossier helpers (living document per job) ---
+
+function buildJobDetailsSection(job) {
+  return [
+    `- Source: ${job.source || '—'}`,
+    `- Date: ${job.date || '—'}`,
+    `- Location: ${job.location || '—'}`,
+    job.link ? `- Link: ${job.link}` : null,
+    job.salary ? `- Salary: ${job.salary}` : null,
+    job.jobType ? `- Type: ${job.jobType}` : null,
+    job.experienceLevel ? `- Level posted: ${job.experienceLevel}` : null,
+    job.companySize ? `- Company size: ${job.companySize}` : null,
+    job.availability ? `- Availability: ${job.availability.status}${job.availability.stale ? ' (stale)' : ''}` : null,
+  ].filter(Boolean).join('\n');
+}
+
+async function createDossier(job) {
+  await mkdir(DOSSIERS_DIR, { recursive: true });
+  const content = [
+    `# Dossier: ${job.company} — ${job.role}`,
+    `**ID:** ${job.id}`,
+    `**Created:** ${datePrefix()}`,
+    '',
+    '## Scanner Assessment',
+    job.rawDossierBlock || buildFallbackScannerSection(job),
+    '',
+    '## Job Details',
+    buildJobDetailsSection(job),
+    '',
+    '## Full Listing',
+    job.fullDescription || job.summary || job.rawListing || '—',
+  ].join('\n');
+  await writeFile(join(DOSSIERS_DIR, `${job.id}.md`), content);
+}
+
+function buildFallbackScannerSection(job) {
+  return [
+    `- Match: ${job.matchType || 'Unknown'}`,
+    `- Risk: ${job.risk || 'Unknown'}`,
+    `- Action: ${job.action || 'EVALUATE'}`,
+    `- Key signal: ${job.keySignal || '—'}`,
+    `- Watch for: ${job.watchFor || '—'}`,
+    job.narrative ? `\n**Why:** ${job.narrative}` : '',
+    job.riskDetail ? `\n**Risk detail:** ${job.riskDetail}` : '',
+  ].filter(Boolean).join('\n');
+}
+
+async function appendToDossier(id, content) {
+  const path = join(DOSSIERS_DIR, `${id}.md`);
+  const existing = await readMarkdown(path);
+  if (existing) {
+    await writeFile(path, existing + '\n\n' + content);
+  }
+}
+
+async function readDossier(id) {
+  return readMarkdown(join(DOSSIERS_DIR, `${id}.md`));
 }
 
 async function callClaude(systemPrompt, userMessage) {
@@ -121,7 +186,7 @@ function parseRawJobListings(markdown) {
     const company = get('Company');
     if (!title || !company) continue;
 
-    jobs.push({
+    const job = {
       title,
       company,
       location: get('Location'),
@@ -129,7 +194,37 @@ function parseRawJobListings(markdown) {
       source: get('Source'),
       summary: get('Summary'),
       link: get('Link'),
-    });
+      salary: get('Salary'),
+      jobType: get('Type'),
+      experienceLevel: get('Level'),
+      companySize: get('Company Size'),
+    };
+
+    // Parse availability field
+    const avail = get('Availability');
+    if (avail) {
+      const status = avail.split(' — ')[0].trim();
+      job.availability = { status };
+      if (avail.includes('stale')) job.availability.stale = true;
+      if (avail.includes(' — ')) job.availability.reason = avail.split(' — ').slice(1).join(' — ');
+    }
+
+    // Parse extraction status
+    const extraction = get('Extraction');
+    if (extraction) {
+      job.extractionStatus = {};
+      for (const pair of extraction.replace(/\(.*\)/, '').split(',')) {
+        const [key, val] = pair.trim().split('=');
+        if (key && val) job.extractionStatus[key.trim()] = val.trim() === 'yes';
+      }
+      if (extraction.includes('FAILED')) job.extractionStatus.failed = true;
+    }
+
+    // Parse full description (multi-line block after "Full Description:")
+    const descMatch = block.match(/Full Description:\n([\s\S]+?)$/);
+    if (descMatch) job.fullDescription = descMatch[1].trim();
+
+    jobs.push(job);
   }
   return jobs;
 }
@@ -163,8 +258,9 @@ function parseScannerOutput(markdown) {
     const job = jobs.find(j => j.index === idx);
     if (job) {
       const detail = match[3];
+      job.rawDossierBlock = detail.trim(); // Preserve Scanner's raw block verbatim
       const whyMatch = detail.match(/\*\*Why:\*\*\s*(.+?)(?:\n|$)/);
-      const riskMatch = detail.match(/\*\*Risk:\*\*\s*(.+?)(?:\n|$)/);
+      const riskMatch = detail.match(/\*\*Risk(?:\s*detail)?:\*\*\s*(.+?)(?:\n|$)/);
       const watchMatch = detail.match(/\*\*Watch for:\*\*\s*(.+?)(?:\n|$)/);
       const fenceMatch = detail.match(/\*\*On the fence because:\*\*\s*(.+?)(?:\n|$)/);
 
@@ -172,6 +268,21 @@ function parseScannerOutput(markdown) {
       if (riskMatch) job.riskDetail = riskMatch[1].trim();
       if (watchMatch) job.watchFor = watchMatch[1].trim();
       if (fenceMatch) job.narrative = fenceMatch[1].trim();
+
+      // Extract dossier profile context fields (new format)
+      const skillsMatch = detail.match(/[-•]\s*Matched skills:\s*(.+?)(?:\n|$)/);
+      const levelMatch = detail.match(/[-•]\s*Level context:\s*(.+?)(?:\n|$)/);
+      const riskNoteMatch = detail.match(/[-•]\s*Risk appetite note:\s*(.+?)(?:\n|$)/);
+      const redFlagMatch = detail.match(/[-•]\s*Red flags to check:\s*(.+?)(?:\n|$)/);
+
+      if (skillsMatch) job.matchedSkills = skillsMatch[1].trim();
+      if (levelMatch) job.levelContext = levelMatch[1].trim();
+      if (riskNoteMatch) job.riskAppetiteNote = riskNoteMatch[1].trim();
+      if (redFlagMatch) job.redFlagsToCheck = redFlagMatch[1].trim();
+
+      // Extract raw listing block if Scanner included it
+      const listingMatch = detail.match(/\*\*Raw listing:\*\*\s*\n([\s\S]+?)(?=\n###|\n---|\n\*\*|$)/);
+      if (listingMatch) job.rawListing = listingMatch[1].trim();
     }
   }
 
@@ -183,6 +294,11 @@ function parseScannerOutput(markdown) {
     maybe: parseInt(statsMatch[3]),
     skipped: parseInt(statsMatch[4]),
   } : null;
+
+  // Warn if parsing produced no jobs from non-empty output
+  if (jobs.length === 0 && markdown.trim().length > 100) {
+    console.warn('WARNING: parseScannerOutput found 0 jobs in non-empty Scanner output. Format may have changed.');
+  }
 
   return { jobs, stats, raw: markdown };
 }
@@ -287,9 +403,23 @@ app.get('/api/jobs', async (req, res) => {
           job.location = raw.location || '';
           job.link = raw.link || '';
           job.summary = raw.summary || '';
+          job.fullDescription = raw.fullDescription || '';
           job.source = raw.source || '';
           job.posted = raw.posted || '';
+          job.salary = raw.salary || '';
+          job.jobType = raw.jobType || '';
+          job.experienceLevel = raw.experienceLevel || '';
+          job.companySize = raw.companySize || '';
+          if (raw.availability) job.availability = raw.availability;
+          if (raw.extractionStatus) job.extractionStatus = raw.extractionStatus;
         }
+
+        // Compute missing fields for UI
+        job.missingFields = [];
+        if (!job.fullDescription && !job.summary && !job.narrative) job.missingFields.push('description');
+        if (!job.salary) job.missingFields.push('salary');
+        if (!job.location) job.missingFields.push('location');
+        if (!job.link) job.missingFields.push('link');
         if (!job.source) {
           job.source = file.includes('indeed') ? 'Indeed' : file.includes('linkedin') ? 'LinkedIn' : 'Manual';
         }
@@ -307,6 +437,12 @@ app.get('/api/jobs', async (req, res) => {
     const scannedIds = new Set(allJobs.map(j => j.id));
     for (const [id, raw] of Object.entries(rawJobIndex)) {
       if (scannedIds.has(id)) continue;
+      const missingFields = [];
+      if (!raw.fullDescription && !raw.summary) missingFields.push('description');
+      if (!raw.salary) missingFields.push('salary');
+      if (!raw.location) missingFields.push('location');
+      if (!raw.link) missingFields.push('link');
+
       allJobs.push({
         id,
         company: raw.company,
@@ -314,12 +450,20 @@ app.get('/api/jobs', async (req, res) => {
         location: raw.location || '',
         link: raw.link || '',
         summary: raw.summary || '',
+        fullDescription: raw.fullDescription || '',
         source: raw.source || '',
         posted: raw.posted || '',
+        salary: raw.salary || '',
+        jobType: raw.jobType || '',
+        experienceLevel: raw.experienceLevel || '',
+        companySize: raw.companySize || '',
         date: '',
         action: '',
         tags: [],
         hasEvaluation: false,
+        availability: raw.availability || null,
+        extractionStatus: raw.extractionStatus || null,
+        missingFields,
       });
     }
 
@@ -424,33 +568,114 @@ app.post('/api/scan', async (req, res) => {
     await writeFile(join(DATA, 'scans', finalName), result);
 
     const parsed = parseScannerOutput(result);
+
+    // Create living dossier per EVALUATE job (single source of truth)
+    for (const job of (parsed.jobs || [])) {
+      if (job.action && job.action.toUpperCase() === 'EVALUATE') {
+        job.id = job.id || jobId(job.company, job.role);
+        await createDossier(job);
+        job.dossierFile = `${job.id}.md`;
+      }
+    }
+
     res.json({ filename: finalName, ...parsed });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// Evaluate — run evaluator on a specific job
+// Evaluate — run evaluator on a specific job (reads dossier + modular prompts)
 app.post('/api/evaluate/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { jobDescription } = req.body;
+    const { jobDescription, dossierFile } = req.body;
 
     const profile = await readMarkdown(join(DATA, 'profile.md'));
     if (!profile) return res.status(400).json({ error: 'Profile not set' });
 
-    const evalPrompt = await readMarkdown(EVALUATOR_PROMPT);
-    if (!evalPrompt) return res.status(500).json({ error: 'Evaluator prompt not found' });
+    // Compose system prompt from modular parts
+    const systemParts = [
+      await readMarkdown(EVALUATOR_SYSTEM),
+      await readMarkdown(EVALUATOR_INITIAL),
+    ].filter(Boolean);
+    const systemPrompt = systemParts.length > 0
+      ? systemParts.join('\n\n---\n\n')
+      : await readMarkdown(EVALUATOR_PROMPT); // fallback to legacy prompt
 
-    const userMessage = profile
-      ? `## My Background\n\n${profile}\n\n## Job Description\n\n${jobDescription || `Job ID: ${id}`}`
-      : jobDescription || `Please evaluate the job with ID: ${id}`;
-    const result = await callClaude(evalPrompt, userMessage);
+    if (!systemPrompt) {
+      return res.status(500).json({ error: 'Evaluator prompts not found. Check evaluator/*.md files.' });
+    }
 
+    // Build user message with profile + learned profile + dossier
+    const learnedProfile = await readMarkdown(join(DATA, 'learned-profile.md'));
+    // Read living dossier (try new location first, then legacy)
+    let dossier = await readDossier(id);
+    if (!dossier && dossierFile) {
+      dossier = await readMarkdown(join(DATA, 'scans', 'dossiers', dossierFile));
+    }
+
+    const userParts = [
+      `## My Profile\n\n${profile}`,
+      learnedProfile ? `## Learned Profile (from past decisions)\n\n${learnedProfile}` : '',
+      dossier ? `## Scanner Dossier\n\n${dossier}` : '',
+      jobDescription ? `## Job Description\n\n${jobDescription}` : '',
+    ].filter(Boolean);
+
+    const result = await callClaude(systemPrompt, userParts.join('\n\n'));
+
+    // Append evaluation to living dossier
+    await appendToDossier(id, `## Evaluator Assessment\n**Date:** ${datePrefix()}\n${result}`);
+
+    // Also write standalone file for backwards compat
     const filename = `${datePrefix()}-${id}.md`;
+    await mkdir(join(DATA, 'evaluations'), { recursive: true });
     await writeFile(join(DATA, 'evaluations', filename), result);
 
     res.json({ filename, result });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Follow-up — user asks a specific question about a previous evaluation
+app.post('/api/evaluate/:id/follow-up', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { question, previousEvaluation, dossierFile } = req.body;
+    if (!question) return res.status(400).json({ error: 'Question required' });
+
+    const systemParts = [
+      await readMarkdown(EVALUATOR_SYSTEM),
+      await readMarkdown(EVALUATOR_FOLLOWUP),
+    ].filter(Boolean);
+    const systemPrompt = systemParts.join('\n\n---\n\n');
+
+    if (!systemPrompt) {
+      return res.status(500).json({ error: 'Evaluator prompts not found. Check evaluator/*.md files.' });
+    }
+
+    // Include full context so evaluator can answer JD-specific questions
+    const profile = await readMarkdown(join(DATA, 'profile.md'));
+    let dossier = null;
+    // Try new dossier location first, then legacy
+    dossier = await readMarkdown(join(DATA, 'dossiers', `${id}.md`));
+    if (!dossier && dossierFile) {
+      dossier = await readMarkdown(join(DATA, 'scans', 'dossiers', dossierFile));
+    }
+
+    const userParts = [
+      profile ? `## My Profile\n\n${profile}` : '',
+      dossier ? `## Dossier\n\n${dossier}` : '',
+      `## Previous Evaluation\n\n${previousEvaluation || '—'}`,
+      `## My Question\n\n${question}`,
+    ].filter(Boolean);
+
+    const result = await callClaude(systemPrompt, userParts.join('\n\n'));
+
+    // Append follow-up to living dossier
+    await appendToDossier(id, `## Follow-ups\n### ${datePrefix()} — "${question}"\n${result}`);
+
+    res.json({ result });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -475,6 +700,11 @@ app.post('/api/decisions', async (req, res) => {
     content += row;
 
     await writeFile(join(DATA, 'decisions.md'), content);
+
+    // Append decision to living dossier
+    const id = jobId(company, role);
+    await appendToDossier(id, `## User Decision\n**Decision:** ${decision}\n**Date:** ${datePrefix()}`);
+
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -812,7 +1042,7 @@ app.post('/api/fetch', async (req, res) => {
       dataDir: DATA,
       headless: true,
       maxPages: 3,
-      getSummaries: false,
+      getSummaries: true,
     });
 
     fetchInProgress = false;
@@ -863,11 +1093,15 @@ app.post('/api/fetch-and-scan', async (req, res) => {
 
     fetchInProgress = false;
 
-    if (result.totalFetched === 0) {
-      return res.json({ ok: true, totalFetched: 0, message: 'No new jobs found.' });
+    // Filter out dead jobs before scanning
+    const liveJobs = result.newJobs.filter(j => j.availability?.status !== 'dead');
+    const deadCount = result.newJobs.length - liveJobs.length;
+
+    if (liveJobs.length === 0) {
+      return res.json({ ok: true, totalFetched: result.totalFetched, deadFiltered: deadCount, message: deadCount > 0 ? `Found ${result.totalFetched} jobs but all appear expired.` : 'No new jobs found.' });
     }
 
-    // Step 2: Read the fetched jobs and scan them
+    // Step 2: Read the fetched jobs and scan them (dead jobs stay in files for audit)
     let allListings = '';
     for (const file of result.files) {
       const content = await readFile(join(DATA, 'jobs', file), 'utf-8');
@@ -876,10 +1110,9 @@ app.post('/api/fetch-and-scan', async (req, res) => {
 
     const profile = await readMarkdown(join(DATA, 'profile.md'));
     if (!profile) {
-      return res.json({
-        ok: true,
+      return res.status(400).json({
+        error: 'Jobs fetched but not scanned — no profile set.',
         totalFetched: result.totalFetched,
-        message: 'Jobs fetched but not scanned — no profile set.',
         files: result.files,
       });
     }

@@ -250,16 +250,120 @@ async function scrapeIndeedJobs(page, query, location, maxPages = 3) {
 
 // --- Get JD Summary for a Single Job ---
 
+// --- Job detail page extraction with availability check ---
+
 async function getJobSummary(page, job) {
-  if (!job.link) return job;
+  if (!job.link) {
+    job.availability = { status: 'unknown', reason: 'No link' };
+    return job;
+  }
 
   try {
-    await page.goto(job.link, { waitUntil: 'networkidle2', timeout: 20000 });
+    const response = await page.goto(job.link, { waitUntil: 'networkidle2', timeout: 20000 });
+    const httpStatus = response?.status() || 0;
+
+    // --- Availability check: HTTP level ---
+    if (httpStatus === 404 || httpStatus === 410) {
+      job.availability = { status: 'dead', reason: `HTTP ${httpStatus}` };
+      return job;
+    }
+    if (httpStatus >= 400) {
+      job.availability = { status: 'error', reason: `HTTP ${httpStatus}` };
+      return job;
+    }
+
     await sleep(1500);
 
-    const summary = await page.evaluate(() => {
-      // Try common JD containers
-      const selectors = [
+    // --- Availability check: page content level ---
+    const pageAlive = await page.evaluate(() => {
+      const text = document.body?.innerText || '';
+      const deadPatterns = [
+        // Generic
+        /this\s+(job|position)\s+(is\s+)?no\s+longer\s+available/i,
+        /position\s+has\s+been\s+filled/i,
+        /this\s+job\s+(has\s+been\s+|was\s+)?removed/i,
+        /this\s+job\s+has\s+expired/i,
+        /sorry.*this\s+position/i,
+        /no\s+longer\s+accepting\s+applications/i,
+        /this\s+listing\s+has\s+closed/i,
+        /job\s+(has\s+)?closed/i,
+        /this\s+role\s+has\s+been\s+filled/i,
+        /application\s+period\s+has\s+ended/i,
+        // Greenhouse
+        /there\s+are\s+no\s+jobs\s+for\s+this/i,
+        /this\s+job\s+is\s+no\s+longer\s+open/i,
+        // Ashby
+        /this\s+position\s+is\s+closed/i,
+        /no\s+open\s+positions\s+match/i,
+        // Workday
+        /this\s+job\s+has\s+been\s+archived/i,
+        /job\s+requisition\s+.*\s+closed/i,
+        // Lever
+        /this\s+position\s+is\s+no\s+longer\s+available/i,
+      ];
+      for (const p of deadPatterns) {
+        if (p.test(text)) return { alive: false, match: text.match(p)?.[0] || 'Job removed' };
+      }
+
+      // Extract actual posting date from structured data
+      let postedDate = null;
+      const timeEl = document.querySelector('time[datetime]');
+      if (timeEl) postedDate = timeEl.getAttribute('datetime');
+      if (!postedDate) {
+        const metaDate = document.querySelector('meta[property="datePosted"], meta[name="datePosted"]');
+        if (metaDate) postedDate = metaDate.getAttribute('content');
+      }
+      if (!postedDate) {
+        const schema = document.querySelector('script[type="application/ld+json"]');
+        if (schema) {
+          try {
+            const data = JSON.parse(schema.textContent);
+            if (data.datePosted) postedDate = data.datePosted;
+          } catch {}
+        }
+      }
+
+      return { alive: true, postedDate };
+    });
+
+    if (!pageAlive.alive) {
+      job.availability = { status: 'dead', reason: pageAlive.match };
+      return job;
+    }
+
+    job.availability = { status: 'live' };
+
+    // Date-based staleness check
+    if (pageAlive.postedDate) {
+      const posted = new Date(pageAlive.postedDate);
+      if (!isNaN(posted)) {
+        const daysOld = Math.floor((Date.now() - posted) / 86400000);
+        job.postedDate = pageAlive.postedDate;
+        if (daysOld > 60) {
+          job.availability.stale = true;
+          job.availability.staleReason = `Posted ${daysOld} days ago`;
+        }
+      }
+    }
+
+    // --- Extract description + metadata + extraction status ---
+    const details = await page.evaluate(() => {
+      const result = {
+        rawDescription: '',
+        fullDescription: '',
+        summary: '',
+        metadata: {},
+        extractionStatus: {
+          description: false,
+          salary: false,
+          jobType: false,
+          experienceLevel: false,
+          companySize: false,
+        },
+      };
+
+      // --- Full JD text ---
+      const descSelectors = [
         '.show-more-less-html__markup',     // LinkedIn
         '#jobDescriptionText',               // Indeed
         '[class*="description"]',
@@ -267,21 +371,93 @@ async function getJobSummary(page, job) {
         'article',
       ];
 
-      for (const sel of selectors) {
+      for (const sel of descSelectors) {
         const el = document.querySelector(sel);
         if (el && el.textContent.trim().length > 50) {
-          // Get first ~500 chars as summary
           const text = el.textContent.trim();
           const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-          return lines.slice(0, 15).join('\n');
+          result.fullDescription = lines.join('\n');
+          result.summary = lines.slice(0, 15).join('\n');
+          result.extractionStatus.description = true;
+          break;
         }
       }
-      return '';
+
+      // --- Structured metadata from LinkedIn ---
+      const salaryEl = document.querySelector('[class*="salary"], [class*="compensation"], .job-details-jobs-unified-top-card__job-insight--highlight');
+      if (salaryEl) {
+        result.metadata.salary = salaryEl.textContent.trim();
+        result.extractionStatus.salary = true;
+      }
+
+      const typeEls = document.querySelectorAll('.job-details-jobs-unified-top-card__job-insight, [class*="job-type"], .metadata [class*="type"]');
+      for (const el of typeEls) {
+        const text = el.textContent.trim();
+        if (/full.time|part.time|contract|intern|temporary/i.test(text)) {
+          result.metadata.jobType = text.replace(/\s+/g, ' ').trim();
+          result.extractionStatus.jobType = true;
+          break;
+        }
+      }
+
+      const expEls = document.querySelectorAll('[class*="experience"], .job-details-jobs-unified-top-card__job-insight');
+      for (const el of expEls) {
+        const text = el.textContent.trim();
+        if (/entry|associate|mid|senior|director|executive|intern/i.test(text)) {
+          result.metadata.experienceLevel = text.replace(/\s+/g, ' ').trim();
+          result.extractionStatus.experienceLevel = true;
+          break;
+        }
+      }
+
+      const sizeEl = document.querySelector('[class*="company-size"], [class*="num-employees"]');
+      if (sizeEl) {
+        result.metadata.companySize = sizeEl.textContent.trim();
+        result.extractionStatus.companySize = true;
+      }
+
+      // --- Indeed fallbacks ---
+      const indeedSalary = document.querySelector('#salaryInfoAndJobType, [class*="salary-snippet"]');
+      if (indeedSalary && !result.metadata.salary) {
+        result.metadata.salary = indeedSalary.textContent.trim();
+        result.extractionStatus.salary = true;
+      }
+
+      const indeedType = document.querySelector('[class*="jobsearch-JobMetadataHeader"]');
+      if (indeedType && !result.metadata.jobType) {
+        result.metadata.jobType = indeedType.textContent.trim();
+        result.extractionStatus.jobType = true;
+      }
+
+      return result;
     });
 
-    job.summary = summary;
-  } catch {
-    // Failed to get summary, that's OK
+    job.fullDescription = details.fullDescription;
+    job.summary = details.summary;
+    job.extractionStatus = details.extractionStatus;
+    // Flatten metadata onto job object (canonical field names)
+    job.salary = details.metadata.salary || '';
+    job.jobType = details.metadata.jobType || '';
+    job.experienceLevel = details.metadata.experienceLevel || '';
+    job.companySize = details.metadata.companySize || '';
+  } catch (err) {
+    job.availability = { status: 'error', reason: err.message || 'Page load failed' };
+    job.extractionStatus = {
+      failed: true,
+      error: err.message || 'Page load failed',
+      description: false,
+      salary: false,
+      jobType: false,
+      experienceLevel: false,
+      companySize: false,
+    };
+  }
+
+  // --- Fallback staleness check from posted text (if page date check didn't run) ---
+  if (!job.availability?.stale && job.posted && /30\+\s*days?\s*ago/i.test(job.posted)) {
+    if (!job.availability) job.availability = { status: 'live' };
+    job.availability.stale = true;
+    job.availability.staleReason = 'Posted 30+ days ago';
   }
 
   return job;
@@ -342,11 +518,31 @@ function formatJobsMarkdown(jobs, query) {
     lines.push(`Location: ${job.location || 'Unknown'}`);
     lines.push(`Posted: ${job.posted || 'Unknown'}`);
     lines.push(`Source: ${job.source}`);
-    if (job.summary) {
-      lines.push(`Summary: ${job.summary}`);
-    }
+    // Structured metadata (flat fields)
+    if (job.salary) lines.push(`Salary: ${job.salary}`);
+    if (job.jobType) lines.push(`Type: ${job.jobType}`);
+    if (job.experienceLevel) lines.push(`Level: ${job.experienceLevel}`);
+    if (job.companySize) lines.push(`Company Size: ${job.companySize}`);
     if (job.link) {
       lines.push(`Link: ${job.link}`);
+    }
+    // Availability status
+    if (job.availability) {
+      const parts = [job.availability.status];
+      if (job.availability.stale) parts.push('stale');
+      if (job.availability.reason) parts.push(job.availability.reason);
+      lines.push(`Availability: ${parts.join(' — ')}`);
+    }
+    // Extraction status (what we got vs. what we missed)
+    if (job.extractionStatus) {
+      const fields = ['description', 'salary', 'jobType', 'experienceLevel', 'companySize'];
+      const status = fields.map(f => `${f}=${job.extractionStatus[f] ? 'yes' : 'no'}`).join(', ');
+      lines.push(`Extraction: ${status}${job.extractionStatus.failed ? ' (FAILED: ' + job.extractionStatus.error + ')' : ''}`);
+    }
+    if (job.fullDescription) {
+      lines.push(`\nFull Description:\n${job.fullDescription}`);
+    } else if (job.summary) {
+      lines.push(`Summary: ${job.summary}`);
     }
     lines.push('');
   });

@@ -20,7 +20,7 @@ export function initJobDetail() {
     try {
       const result = await api(`/evaluate/${currentJob.id}`, {
         method: 'POST',
-        body: { jobDescription: buildEvalDescription() },
+        body: { jobDescription: buildEvalDescription(), dossierFile: currentJob.dossierFile },
       });
 
       currentJob.evaluation = result.result;
@@ -114,6 +114,30 @@ export function showJobDetail(job) {
   // Inject icons in action buttons
   injectIcons(document.getElementById('detail-actions-section'));
 
+  // Availability banner
+  const availEl = document.getElementById('detail-availability');
+  if (job.availability?.status === 'dead') {
+    availEl.className = 'availability-banner availability-dead';
+    availEl.textContent = `This job appears to be no longer available${job.availability.reason ? ` (${job.availability.reason})` : ''}`;
+    availEl.classList.remove('hidden');
+  } else if (job.availability?.stale) {
+    availEl.className = 'availability-banner availability-stale';
+    availEl.textContent = 'This listing may be stale — posted 30+ days ago';
+    availEl.classList.remove('hidden');
+  } else {
+    availEl.classList.add('hidden');
+  }
+
+  // Missing data indicator
+  const missingEl = document.getElementById('detail-missing');
+  if (job.missingFields?.length > 0) {
+    missingEl.className = 'missing-indicator';
+    missingEl.textContent = `Missing: ${job.missingFields.join(', ')}`;
+    missingEl.classList.remove('hidden');
+  } else {
+    missingEl.classList.add('hidden');
+  }
+
   // Header
   document.getElementById('detail-company').textContent = job.company || 'Unknown';
   document.getElementById('detail-role').textContent = job.role || 'Unknown Role';
@@ -174,12 +198,15 @@ function renderEvaluator() {
   const container = document.getElementById('detail-evaluator');
 
   if (currentJob.hasEvaluation && currentJob.evaluation) {
-    // Parse evaluation result
+    // Parse evaluation result — support both old and new field names
     const eval_ = currentJob.evaluation;
-    const matchType = extractField(eval_, 'Match Type');
-    const levelFit = extractField(eval_, 'Level Fit');
+    const matchType = extractField(eval_, 'Match Type') || extractField(eval_, 'Match');
+    const levelFit = extractField(eval_, 'Level Fit') || extractField(eval_, 'Level');
+    const risk = extractField(eval_, 'Risk');
     const decision = extractField(eval_, 'Decision');
-    const reasoning = extractField(eval_, 'Reasoning');
+    const reasoning = extractField(eval_, 'Reasoning') || extractField(eval_, 'Why');
+    const resumeAngle = extractField(eval_, 'Resume angle');
+    const watchOuts = extractField(eval_, 'Watch-outs');
 
     container.innerHTML = `
       <div class="eval-result">
@@ -187,10 +214,54 @@ function renderEvaluator() {
           ${decision ? `<span class="tag ${decisionColor(decision)}">${escapeHtml(decision)}</span>` : ''}
           ${matchType ? `<span class="tag blue">${escapeHtml(matchType)}</span>` : ''}
           ${levelFit ? `<span class="tag gray">${escapeHtml(levelFit)}</span>` : ''}
+          ${risk ? `<span class="tag ${risk.toLowerCase().includes('safe') ? 'green' : 'amber'}">${escapeHtml(risk)}</span>` : ''}
         </div>
         ${reasoning ? `<p class="narrative">${escapeHtml(reasoning)}</p>` : ''}
+        ${watchOuts ? `<p style="font-size: 13px; color: var(--text-muted); margin-top: 8px;"><strong>Watch-outs:</strong> ${escapeHtml(watchOuts)}</p>` : ''}
+        ${resumeAngle ? `<p style="font-size: 13px; color: var(--text-secondary); margin-top: 8px;"><strong>Resume angle:</strong> ${escapeHtml(resumeAngle)}</p>` : ''}
+        <div class="eval-follow-up" style="margin-top: 12px;">
+          <button class="btn btn-sm btn-ghost" id="btn-ask-more">Ask something specific</button>
+          <div id="follow-up-input" class="hidden" style="margin-top: 8px;">
+            <input type="text" id="follow-up-question" placeholder="e.g. Is this strategy or execution?" style="width: 100%; padding: 8px 10px; font-size: 13px; font-family: var(--font); border: 1px solid var(--border); border-radius: var(--radius);">
+            <button class="btn btn-sm" id="btn-send-follow-up" style="margin-top: 6px;">Ask</button>
+          </div>
+          <div id="follow-up-response" class="hidden" style="margin-top: 8px;"></div>
+        </div>
       </div>
     `;
+
+    // Bind follow-up handlers
+    document.getElementById('btn-ask-more')?.addEventListener('click', () => {
+      document.getElementById('btn-ask-more').classList.add('hidden');
+      document.getElementById('follow-up-input').classList.remove('hidden');
+      document.getElementById('follow-up-question').focus();
+    });
+
+    document.getElementById('btn-send-follow-up')?.addEventListener('click', async () => {
+      const question = document.getElementById('follow-up-question').value.trim();
+      if (!question || !currentJob) return;
+      document.getElementById('btn-send-follow-up').disabled = true;
+      document.getElementById('btn-send-follow-up').textContent = 'Asking...';
+      try {
+        const result = await api(`/evaluate/${currentJob.id}/follow-up`, {
+          method: 'POST',
+          body: { question, previousEvaluation: currentJob.evaluation, dossierFile: currentJob.dossierFile },
+        });
+        document.getElementById('follow-up-input').classList.add('hidden');
+        const responseEl = document.getElementById('follow-up-response');
+        responseEl.classList.remove('hidden');
+        responseEl.innerHTML = `<p class="narrative">${escapeHtml(result.result)}</p>`;
+      } catch (err) {
+        alert(`Follow-up failed: ${err.message}`);
+        document.getElementById('btn-send-follow-up').disabled = false;
+        document.getElementById('btn-send-follow-up').textContent = 'Ask';
+      }
+    });
+
+    // Allow Enter key to submit
+    document.getElementById('follow-up-question')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') document.getElementById('btn-send-follow-up')?.click();
+    });
   } else if (!health.apiKeyConfigured) {
     container.innerHTML = `
       <span style="font-size: 12px; color: var(--text-muted);">Evaluator requires API key — add ANTHROPIC_API_KEY to app/.env</span>
@@ -207,7 +278,7 @@ function renderEvaluator() {
       try {
         const result = await api(`/evaluate/${currentJob.id}`, {
           method: 'POST',
-          body: { jobDescription: buildEvalDescription() },
+          body: { jobDescription: buildEvalDescription(), dossierFile: currentJob.dossierFile },
         });
         currentJob.evaluation = result.result;
         currentJob.hasEvaluation = true;
