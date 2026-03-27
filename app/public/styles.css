@@ -159,7 +159,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 20px;
+  padding: 0 max(20px, calc((100% - 1200px) / 2 + 20px));
   height: 48px;
   background: var(--bg-panel);
   border-bottom: 1px solid var(--border);
@@ -206,7 +206,7 @@ body {
 /* --- Profile Strip --- */
 
 .profile-strip {
-  padding: 6px 16px;
+  padding: 6px max(16px, calc((100% - 1200px) / 2 + 16px));
   background: var(--gray-bg);
   border-bottom: 1px solid var(--border);
   font-size: 12px;
@@ -221,6 +221,14 @@ body {
   display: flex;
   flex: 1;
   overflow: hidden;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* Expand when detail panel is open — needs full width for split view */
+.dashboard.detail-open {
+  max-width: 100%;
 }
 
 .job-list-panel {
@@ -1304,6 +1312,8 @@ textarea:focus { outline: 2px solid var(--text); outline-offset: -1px; }
 
 /* Large desktop: 24" monitor */
 @media (min-width: 1728px) {
+  .dashboard { max-width: 1400px; }
+  .dashboard.detail-open { max-width: 100%; }
   .dashboard.detail-open .job-list-panel { flex: 0 0 45%; }
   .detail-content { max-width: 840px; }
 }
