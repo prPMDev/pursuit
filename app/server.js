@@ -941,6 +941,23 @@ app.get('/api/setup/status', async (req, res) => {
   });
 });
 
+// Reset profile and restart onboarding
+app.post('/api/setup/reset', async (req, res) => {
+  try {
+    // Clear profile
+    const profilePath = join(DATA, 'profile.md');
+    try { await writeFile(profilePath, ''); } catch {}
+
+    // Reset setup flag
+    settings.setupComplete = false;
+    await saveSettings();
+
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Mark setup as complete (new static form flow)
 app.post('/api/setup/mark-complete', async (req, res) => {
   settings.setupComplete = true;

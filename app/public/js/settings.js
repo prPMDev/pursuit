@@ -130,6 +130,12 @@ export function renderSettingsModal() {
         <h4>Data</h4>
         <p><a href="#" id="btn-view-decisions">View Decision Log</a></p>
       </div>
+
+      <div class="settings-section" style="margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border);">
+        <h4>Reset</h4>
+        <p class="modal-hint">Clear your profile and start fresh. This resets onboarding.</p>
+        <button class="btn btn-sm" id="btn-reset-profile" style="color: var(--red); border-color: var(--red-border);">Reset Profile</button>
+      </div>
     </div>
   `;
   container.appendChild(el);
@@ -328,6 +334,18 @@ export function initSettings() {
       alert(content || 'No decisions logged yet.');
     } catch (err) {
       alert(`Failed to load decisions: ${err.message}`);
+    }
+  });
+
+  // Reset profile
+  document.getElementById('btn-reset-profile')?.addEventListener('click', async () => {
+    if (!confirm('This will clear your profile and restart onboarding. Are you sure?')) return;
+    try {
+      await api('/setup/reset', { method: 'POST' });
+      hideModal('modal-settings');
+      window.location.reload();
+    } catch (err) {
+      alert(`Reset failed: ${err.message}`);
     }
   });
 
