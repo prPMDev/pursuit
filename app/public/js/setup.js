@@ -187,7 +187,7 @@ export function renderSetupOverlay() {
           </div>
           <div class="setup-form-group setup-comp-flex">
             <label>&nbsp;</label>
-            <label class="setup-checkbox"><input type="checkbox" id="setup-comp-flexible" checked> Flexible <span class="tooltip-icon" title="Flexible means ±10% from your stated range">?</span></label>
+            <label class="setup-checkbox"><input type="checkbox" id="setup-comp-flexible" checked> Flexible <span class="tooltip-icon" title="Flexible means ±10% from your stated range" tabindex="0" role="img" aria-label="Flexible means ±10% from your stated range">?</span></label>
           </div>
         </div>
 

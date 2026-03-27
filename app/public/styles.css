@@ -52,17 +52,6 @@
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
-/* --- Pico CSS overrides ---
-   Pico adds margins/padding to native elements globally.
-   We neutralize its aggressive defaults outside the setup overlay,
-   while keeping Pico active inside .setup-overlay for nice form styling. */
-
-:where(body) { padding: 0; }
-:where(h1, h2, h3, h4, h5, h6) { margin-bottom: 0; --pico-font-weight: 600; }
-:where(p) { margin-bottom: 0; }
-:where(article, section, aside, header, footer, main) { padding: 0; margin: 0; }
-:where(a) { --pico-color: var(--blue); }
-
 /* --- Shoelace custom properties — match warm stone palette --- */
 :root {
   --sl-color-primary-50: #fafaf9;
@@ -904,24 +893,33 @@ textarea:focus { outline: 2px solid var(--text); outline-offset: -1px; }
 .setup-checkbox-group {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 8px;
 }
 
 .setup-checkbox {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
   font-size: 13px;
   cursor: pointer;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--bg-panel);
+  transition: all 0.15s;
+  user-select: none;
 }
 
-/* Checkboxes */
+.setup-checkbox:hover { border-color: var(--text-light); }
+
+.setup-checkbox:has(input:checked) {
+  background: var(--text);
+  color: white;
+  border-color: var(--text);
+}
+
 .setup-checkbox input[type="checkbox"] {
-  width: 14px;
-  height: 14px;
-  margin: 0;
-  cursor: pointer;
-  vertical-align: middle;
+  display: none;
 }
 
 .setup-hint {
@@ -1022,8 +1020,33 @@ textarea:focus { outline: 2px solid var(--text); outline-offset: -1px; }
 }
 
 .setup-nav-right { display: flex; gap: 8px; align-items: center; }
-.tooltip-icon { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 50%; background: #d1d5db; color: #374151; font-size: 11px; font-weight: 700; cursor: help; vertical-align: middle; margin-left: 2px; }
-.tooltip-icon:hover { background: #9ca3af; color: #fff; }
+.tooltip-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: var(--border); color: var(--text-muted);
+  font-size: 11px; font-weight: 700; cursor: help;
+  vertical-align: middle; margin-left: 2px;
+  position: relative;
+}
+.tooltip-icon:hover,
+.tooltip-icon:focus { background: var(--text-light); color: white; }
+.tooltip-icon:hover::after,
+.tooltip-icon:focus::after {
+  content: attr(title);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 10px;
+  background: var(--text);
+  color: white;
+  font-size: 12px;
+  font-weight: 400;
+  border-radius: var(--radius);
+  white-space: nowrap;
+  z-index: 10;
+  pointer-events: none;
+}
 .btn-danger-text { color: var(--red, #cb2431) !important; font-size: 12px; opacity: 0.7; }
 .btn-danger-text:hover { opacity: 1; }
 
