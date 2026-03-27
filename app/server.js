@@ -22,7 +22,7 @@ app.use(express.json({ limit: '1mb' }));
 app.use(express.static(join(__dirname, 'public')));
 
 const PORT = process.env.PORT || 3000;
-const API_KEY = process.env.ANTHROPIC_API_KEY;
+let API_KEY = process.env.ANTHROPIC_API_KEY;
 
 // Settings stored in memory (persisted to data/settings.json)
 let settings = {
@@ -35,6 +35,31 @@ let systemChecks = {
   chromePath: null,
   chromeProfilePath: null,
 };
+
+// Decisions index — maps jobId → most recent decision (persists inline actions across refresh)
+let decisionsIndex = {};
+
+async function loadDecisionsIndex() {
+  try {
+    const content = await readFile(join(DATA, 'decisions.md'), 'utf-8');
+    if (!content) return;
+    // Parse markdown table rows: | Date | Company | Role | Scanner | Decision | Outcome |
+    const lines = content.split('\n');
+    for (const line of lines) {
+      if (!line.startsWith('|') || line.includes('---') || line.includes('Date')) continue;
+      const cols = line.split('|').map(c => c.trim()).filter(Boolean);
+      if (cols.length >= 5) {
+        const [, company, role, , decision] = cols;
+        if (company && role && decision) {
+          const id = jobId(company, role);
+          decisionsIndex[id] = decision;
+        }
+      }
+    }
+  } catch {
+    // No decisions file yet — that's fine
+  }
+}
 
 // --- Helpers ---
 
@@ -467,6 +492,16 @@ app.get('/api/jobs', async (req, res) => {
       });
     }
 
+    // Overlay decisions from index (so inline Pass/Save persists across refresh)
+    for (const job of allJobs) {
+      const decision = decisionsIndex[job.id];
+      if (decision) {
+        job.decision = decision;
+        // Upgrade action for Pass decisions so badge shows correctly
+        if (decision === 'PASS' && job.action !== 'PASS') job.action = 'PASS';
+      }
+    }
+
     res.json({ jobs: allJobs });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -600,7 +635,7 @@ app.post('/api/evaluate/:id', async (req, res) => {
     ].filter(Boolean);
     const systemPrompt = systemParts.length > 0
       ? systemParts.join('\n\n---\n\n')
-      : await readMarkdown(EVALUATOR_PROMPT); // fallback to legacy prompt
+      : null; // No fallback — modular prompts (system.md + initial-eval.md) are required
 
     if (!systemPrompt) {
       return res.status(500).json({ error: 'Evaluator prompts not found. Check evaluator/*.md files.' });
@@ -701,8 +736,11 @@ app.post('/api/decisions', async (req, res) => {
 
     await writeFile(join(DATA, 'decisions.md'), content);
 
-    // Append decision to living dossier
+    // Update in-memory decisions index
     const id = jobId(company, role);
+    decisionsIndex[id] = decision;
+
+    // Append decision to living dossier
     await appendToDossier(id, `## User Decision\n**Decision:** ${decision}\n**Date:** ${datePrefix()}`);
 
     res.json({ ok: true });
@@ -851,8 +889,9 @@ app.post('/api/ai/configure', async (req, res) => {
     settings.ai = { provider, key, model };
     await saveSettings();
 
-    // Update in-memory API_KEY for callClaude fallback
+    // Update in-memory API_KEY so callClaude works immediately
     if (provider === 'anthropic') {
+      API_KEY = key;
       process.env.ANTHROPIC_API_KEY = key;
     }
 
@@ -1324,7 +1363,15 @@ function runSystemChecks() {
 async function start() {
   await ensureDataDirs();
   await loadSettings();
+  await loadDecisionsIndex();
   runSystemChecks();
+
+  // Restore API key from settings if not in env (fixes #59)
+  if ((!API_KEY || API_KEY === 'sk-ant-your-key-here') && settings.ai?.key) {
+    API_KEY = settings.ai.key;
+    process.env.ANTHROPIC_API_KEY = settings.ai.key;
+    console.log(`  ✓  API key loaded from settings (${settings.ai.provider || 'anthropic'})`);
+  }
 
   app.listen(PORT, () => {
     console.log(`\n  Pursuit Dashboard running at http://localhost:${PORT}\n`);

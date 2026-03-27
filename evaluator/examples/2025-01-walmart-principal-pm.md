@@ -1,4 +1,4 @@
-# Walmart - Principal Product Manager, Core API Platform
+# RetailCo - Principal Product Manager, Core API Platform
 
 **Date Evaluated:** 2025-01-21
 **Evaluator Used:** LinkedIn Post Intelligence Evaluator
@@ -10,13 +10,13 @@
 
 ### 1. Post Overview
 
-**Poster:** Product Leader, Platform & API Ecosystem at Walmart Marketplace
-**Company:** Walmart
+**Poster:** Product Leader at [Large Retailer]
+**Company:** RetailCo
 **Post Freshness:** 2 hours ago (Edited)
 **Engagement:** 17+ reactions, 2 comments, 3 reposts
 **Repost Indicator:** Post was surfaced via connection's comment ("Commenting for reach!!")
 **Job Link:** ✅ Present
-**Job Link URL:** linkedin.com/jobs/view/4353628262
+**Job Link URL:** linkedin.com/jobs/view/XXXXXXXXXX
 
 ### 2. Poster Analysis
 
@@ -33,7 +33,7 @@
 
 **Role:** Principal, Product Manager - Core API Platform & Enablement
 **Level:** Principal (Senior/Staff equivalent)
-**Company:** Walmart
+**Company:** RetailCo
 **Location:** Sunnyvale, CA (On-site)
 **Salary:** $143K/yr - $286K/yr
 **Benefits:** 401(k), stock purchase plan, paid maternity/parental leave, PTO, incentive awards
@@ -54,15 +54,15 @@
 
 ### 4. Network Analysis
 
-**1st Degree Connections at Walmart (17 total)**
+**1st Degree Connections at RetailCo (17 total)**
 
 | # | Name | Title | Hiring Influence | Message Warmth |
 |---|------|-------|------------------|----------------|
 | 1 | Connection A | Product Leader (Mutual w/ poster) | HIGH (Bridge to poster) | COOL (Sep 2025) |
-| 2 | Connection B | Staff PM @ Walmart | HIGH | COLD |
-| 3 | Connection C | Gen AI Product Manager, Walmart | HIGH | COLD |
+| 2 | Connection B | Staff PM @ RetailCo | HIGH | COLD |
+| 3 | Connection C | Gen AI Product Manager, RetailCo | HIGH | COLD |
 | 4 | Connection D | Marketplace, Replenishment | HIGH (Same division) | COLD |
-| 5 | Connection E | PM @ Walmart - Growth Systems ML/AI | MEDIUM | COLD |
+| 5 | Connection E | PM @ RetailCo - Growth Systems ML/AI | MEDIUM | COLD |
 
 **Key Finding:**
 - **Connection A** is the warm bridge:
@@ -74,7 +74,7 @@
 
 ### 5. Hiring Manager
 
-**Identified:** Poster (Product Leader at Walmart Marketplace)
+**Identified:** Poster (Product Leader at [Large Retailer])
 **Confidence:** HIGH (He posted the job directly)
 **DM Accessibility:** OPEN ✅ (Message button visible)
 **Connection Status:** 2nd degree
@@ -97,7 +97,7 @@
 ### 8. Decision: PURSUE ✅
 
 **Reasoning:**
-- **Network Access:** STRONG - 17 connections at Walmart, warm bridge to hiring manager
+- **Network Access:** STRONG - 17 connections at RetailCo, warm bridge to hiring manager
 - **Poster Credibility:** HIGH - Direct hiring manager, actively posting, DMs open
 - **Timing:** FRESH - 2 hours old, actively promoted after 4-day job posting
 - **Accessibility:** HIGH - Multiple entry points, warm connection available
@@ -113,7 +113,7 @@
    - DMs are open
    - Reference Connection A if warm intro received
 
-3. **NETWORK → Other Walmart 1st connections**
+3. **NETWORK → Other RetailCo 1st connections**
    - Connection B (Staff PM)
    - Connection C (Gen AI PM)
    - Connection D (Marketplace team - same division!)
@@ -143,7 +143,7 @@
 - LinkedIn evaluator caught warm bridge (Connection A) who commented on the post
 - Poster being the hiring manager (not HR) = high signal
 - Fresh post (2h) with active promotion = urgency
-- 17 connections = strong network access despite not working at Walmart
+- 17 connections = strong network access despite not working at RetailCo
 - Message history check showed last contact 6 months ago = "cool" but reopenable
 
 **Why PURSUE Decision Made Sense:**

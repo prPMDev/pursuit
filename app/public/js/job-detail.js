@@ -19,35 +19,17 @@ export function initJobDetail() {
     }
   });
 
-  // Evaluate button
-  document.getElementById('btn-evaluate').addEventListener('click', async () => {
-    if (!currentJob) return;
-
-    showLoading('Running evaluator...');
-    try {
-      const result = await api(`/evaluate/${currentJob.id}`, {
-        method: 'POST',
-        body: { jobDescription: buildEvalDescription(), dossierFile: currentJob.dossierFile },
-      });
-
-      currentJob.evaluation = result.result;
-      currentJob.hasEvaluation = true;
-      renderEvaluator();
-      hideLoading();
-    } catch (err) {
-      hideLoading();
-      alert(`Evaluation failed: ${err.message}`);
-    }
-  });
+  // Evaluate button — bound dynamically in renderEvaluator() to avoid double-fire
 
   // Decision buttons
   document.getElementById('btn-pursue').addEventListener('click', () => {
     logDecision('PURSUING');
-    showPipeline('saved');
+    showPipeline('pursuing');
   });
   document.getElementById('btn-pass').addEventListener('click', () => {
     logDecision('PASS');
-    showPipeline('passed');
+    // Don't show pipeline for passed jobs — just give feedback and refresh list
+    refreshJobList();
   });
   document.getElementById('btn-save-later').addEventListener('click', () => {
     logDecision('SAVED');
@@ -188,7 +170,7 @@ export function showJobDetail(job) {
   const tagsContainer = document.getElementById('detail-tags');
   const narrativeEl = document.getElementById('detail-narrative');
   const scannerSection = tagsContainer.closest('.detail-section');
-  const isUnscanned = !job.action || job.action === 'Unscanned' || job.action === 'UNSCANNED';
+  const isUnscanned = !job.action || job.action === 'Unscanned' || job.action === 'UNSCANNED' || job.action === 'NEW';
 
   if (isUnscanned) {
     // Collapse scanner rationale — just show a compact hint

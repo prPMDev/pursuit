@@ -121,7 +121,7 @@
 .status-badge.consider, .status-badge.evaluate { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
 .status-badge.maybe { background: var(--amber-bg); color: var(--amber); border: 1px solid var(--amber-border); }
 .status-badge.pass, .status-badge.skip { background: var(--gray-bg); color: var(--gray); border: 1px solid var(--gray-border); }
-.status-badge.unscanned { background: var(--gray-bg); color: var(--text-light); border: 1px solid var(--gray-border); }
+.status-badge.unscanned, .status-badge.new { background: var(--blue-bg); color: var(--blue); border: 1px solid var(--blue-border); }
 
 .risk-badge {
   display: inline-block;
@@ -1161,6 +1161,95 @@ textarea:focus { outline: 2px solid var(--text); outline-offset: -1px; }
 }
 
 /* --- Utility --- */
+
+/* --- Inline Actions --- */
+
+.inline-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.tabulator-row:hover .inline-actions,
+.tabulator-row.tabulator-selected .inline-actions,
+.inline-actions:focus-within { opacity: 1; }
+
+.btn-inline {
+  width: 26px;
+  height: 26px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: all 0.15s;
+}
+
+.btn-inline:hover { background: var(--bg-hover); }
+.btn-inline.btn-inline-eval:hover { color: var(--blue); }
+.btn-inline.btn-inline-pass:hover { color: var(--red); }
+.btn-inline.btn-inline-save:hover { color: var(--blue); }
+.btn-inline:disabled { opacity: 0.3; cursor: not-allowed; }
+.btn-inline:disabled:hover { background: transparent; }
+
+.btn-inline.btn-inline-saved { color: var(--blue); }
+
+.btn-inline-loading svg {
+  animation: spin 0.8s linear infinite;
+}
+
+/* Row states from inline actions */
+.tabulator-row.row-passed { opacity: 0.4; }
+.tabulator-row.row-passed .tabulator-cell { text-decoration: line-through; color: var(--text-muted); }
+.tabulator-row.row-passed .inline-actions { opacity: 0.6; }
+.tabulator-row.row-saved { background: var(--blue-bg); }
+
+/* Cell overflow for inline actions */
+.tabulator .tabulator-cell.cell-actions { overflow: visible !important; }
+
+/* --- Bulk Action Bar --- */
+
+.bulk-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 10px 24px;
+  background: var(--text);
+  color: #fafaf9;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 50;
+  animation: slideUp 0.2s ease;
+}
+
+.bulk-bar-count {
+  font-weight: 600;
+  min-width: 100px;
+}
+
+.bulk-bar .btn {
+  background: transparent;
+  color: #fafaf9;
+  border-color: rgba(250,250,249,0.3);
+  font-size: 12px;
+  padding: 4px 12px;
+}
+
+.bulk-bar .btn:hover {
+  background: rgba(250,250,249,0.15);
+  border-color: rgba(250,250,249,0.5);
+}
+
+.bulk-bar-spacer { flex: 1; }
 
 .hidden { display: none !important; }
 
