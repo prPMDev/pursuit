@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import express from 'express';
-import { readFile, writeFile, readdir, mkdir, access } from 'node:fs/promises';
+import { readFile, writeFile, readdir, mkdir, access, unlink } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
@@ -27,6 +27,7 @@ let API_KEY = process.env.ANTHROPIC_API_KEY;
 let settings = {
   searchQueries: [],
   lastFetchTime: null,
+  dedupeExpirationDays: 7,
 };
 
 // System check results (populated at startup, re-checked on fetch failure)
@@ -71,6 +72,28 @@ async function ensureDataDirs() {
   await ensureDir(join(DATA, 'scans'));
   await ensureDir(join(DATA, 'evaluations'));
   await ensureDir(join(DATA, 'references'));
+}
+
+async function clearDirectory(dirPath) {
+  try {
+    const files = await readdir(dirPath);
+    const mdFiles = files.filter(f => f.endsWith('.md'));
+    for (const file of mdFiles) {
+      await unlink(join(dirPath, file));
+    }
+    return mdFiles.length;
+  } catch {
+    return 0;
+  }
+}
+
+function searchConfigFingerprint(config) {
+  if (!config) return '';
+  const parts = [
+    (config.titles?.values || []).sort().join(','),
+    (config.locations || []).sort().join(','),
+  ];
+  return createHash('md5').update(parts.join('|')).digest('hex').substring(0, 12);
 }
 
 async function readMarkdown(filepath) {
@@ -764,6 +787,7 @@ app.get('/api/settings', async (req, res) => {
 });
 
 app.put('/api/settings', async (req, res) => {
+  const oldFingerprint = searchConfigFingerprint(settings.searchConfig);
   Object.assign(settings, req.body);
 
   // Auto-generate search queries from structured config
@@ -771,8 +795,11 @@ app.put('/api/settings', async (req, res) => {
     settings.searchQueries = generateSearchQueries(settings.searchConfig);
   }
 
+  const newFingerprint = searchConfigFingerprint(settings.searchConfig);
+  const searchConfigChanged = oldFingerprint && newFingerprint && oldFingerprint !== newFingerprint;
+
   await saveSettings();
-  res.json({ ok: true });
+  res.json({ ok: true, searchConfigChanged, resetSuggested: searchConfigChanged });
 });
 
 // Generate search queries from structured config (title × location cross-product)
@@ -990,6 +1017,52 @@ app.post('/api/setup/reset', async (req, res) => {
     await saveSettings();
 
     res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Force reset jobs/dedup data (#68)
+app.post('/api/jobs/reset', async (req, res) => {
+  try {
+    const {
+      clearSeenJobs = true,
+      clearRawJobs = false,
+      clearScans = false,
+      clearDossiers = false,
+    } = req.body || {};
+
+    const cleared = { seenJobs: 0, rawJobFiles: 0, scanFiles: 0, dossierFiles: 0 };
+
+    if (clearSeenJobs) {
+      const seenPath = join(DATA, '.seen-jobs.json');
+      try {
+        const content = await readFile(seenPath, 'utf-8');
+        const seen = JSON.parse(content);
+        cleared.seenJobs = Object.keys(seen).length;
+        await writeFile(seenPath, '{}');
+      } catch { /* file doesn't exist */ }
+    }
+
+    if (clearRawJobs) {
+      cleared.rawJobFiles = await clearDirectory(join(DATA, 'jobs'));
+    }
+
+    if (clearScans) {
+      cleared.scanFiles = await clearDirectory(join(DATA, 'scans'));
+    }
+
+    if (clearDossiers) {
+      cleared.dossierFiles = await clearDirectory(join(DATA, 'dossiers'));
+    }
+
+    // Rebuild in-memory decisions index if scans were cleared
+    if (clearScans) {
+      decisionsIndex = {};
+      await loadDecisionsIndex();
+    }
+
+    res.json({ ok: true, cleared });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -1246,6 +1319,7 @@ app.post('/api/fetch', async (req, res) => {
       headless: true,
       maxPages: 3,
       getSummaries: true,
+      expirationDays: settings.dedupeExpirationDays || 7,
     });
 
     // Only count successful fetches
@@ -1294,6 +1368,7 @@ app.post('/api/fetch-and-scan', async (req, res) => {
       headless: true,
       maxPages: 3,
       getSummaries: true,
+      expirationDays: settings.dedupeExpirationDays || 7,
     });
 
     // Only count successful fetches

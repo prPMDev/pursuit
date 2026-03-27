@@ -127,14 +127,41 @@ export function renderSettingsModal() {
       </div>
 
       <div class="settings-section">
-        <h4>Data</h4>
+        <h4>Data Management</h4>
+
+        <div style="margin-bottom: 16px;">
+          <label class="modal-hint" style="display: block; margin-bottom: 4px;">Auto-expire seen jobs after</label>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <input type="number" id="settings-dedup-days" min="1" max="90" style="width: 64px;" />
+            <span class="modal-hint">days</span>
+            <button class="btn btn-sm" id="btn-save-dedup-days">Save</button>
+            <span class="settings-save-status" id="dedup-days-status"></span>
+          </div>
+          <p class="modal-hint" style="margin-top: 4px;">Jobs older than this are re-fetched on the next scan. Default: 7 days.</p>
+        </div>
+
         <p><a href="#" id="btn-view-decisions">View Decision Log</a></p>
       </div>
 
       <div class="settings-section" style="margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border);">
         <h4>Reset</h4>
-        <p class="modal-hint">Clear your profile and start fresh. This resets onboarding.</p>
-        <button class="btn btn-sm" id="btn-reset-profile" style="color: var(--red); border-color: var(--red-border);">Reset Profile</button>
+
+        <div style="margin-bottom: 16px;">
+          <p class="modal-hint">Clear the seen-jobs cache so the next fetch picks up fresh results. Your jobs and decisions are kept.</p>
+          <button class="btn btn-sm" id="btn-reset-dedup" style="color: var(--amber); border-color: var(--amber-border);">Clear Seen Jobs Cache</button>
+          <span class="settings-save-status" id="reset-dedup-status"></span>
+        </div>
+
+        <div style="margin-bottom: 16px;">
+          <p class="modal-hint">Clear ALL fetched jobs, scan results, dossiers, and the dedup cache. Your decisions and profile are always preserved.</p>
+          <button class="btn btn-sm" id="btn-reset-jobs" style="color: var(--red); border-color: var(--red-border);">Reset All Job Data</button>
+          <span class="settings-save-status" id="reset-jobs-status"></span>
+        </div>
+
+        <div>
+          <p class="modal-hint">Clear your profile and start fresh. This resets onboarding.</p>
+          <button class="btn btn-sm" id="btn-reset-profile" style="color: var(--red); border-color: var(--red-border);">Reset Profile</button>
+        </div>
       </div>
     </div>
   `;
@@ -264,7 +291,7 @@ export function initSettings() {
     };
 
     try {
-      await api('/settings', {
+      const result = await api('/settings', {
         method: 'PUT',
         body: { searchConfig },
       });
@@ -272,6 +299,14 @@ export function initSettings() {
       statusEl.textContent = 'Saved';
       statusEl.style.color = 'var(--green)';
       setTimeout(() => { statusEl.textContent = ''; }, 2000);
+
+      // If search titles/locations changed, suggest clearing dedup cache
+      if (result.resetSuggested) {
+        const doReset = confirm('Your search titles or locations changed. Clear the seen-jobs cache so the next fetch picks up fresh results?');
+        if (doReset) {
+          await api('/jobs/reset', { method: 'POST', body: { clearSeenJobs: true } });
+        }
+      }
 
       // Reload to show generated queries
       await loadSettingsUI();
@@ -349,6 +384,55 @@ export function initSettings() {
     }
   });
 
+  // Clear seen-jobs cache only
+  document.getElementById('btn-reset-dedup')?.addEventListener('click', async () => {
+    if (!confirm('Clear the seen-jobs cache? Previously fetched jobs will appear as new on the next fetch.')) return;
+    try {
+      const result = await api('/jobs/reset', { method: 'POST', body: { clearSeenJobs: true } });
+      const statusEl = document.getElementById('reset-dedup-status');
+      statusEl.textContent = `Cleared ${result.cleared.seenJobs} entries`;
+      statusEl.style.color = 'var(--green)';
+      setTimeout(() => { statusEl.textContent = ''; }, 3000);
+    } catch (err) {
+      alert(`Reset failed: ${err.message}`);
+    }
+  });
+
+  // Reset all job data
+  document.getElementById('btn-reset-jobs')?.addEventListener('click', async () => {
+    if (!confirm('This will clear ALL fetched jobs, scan results, dossiers, and the dedup cache. Your decisions and profile are preserved. Continue?')) return;
+    try {
+      const result = await api('/jobs/reset', {
+        method: 'POST',
+        body: { clearSeenJobs: true, clearRawJobs: true, clearScans: true, clearDossiers: true },
+      });
+      const c = result.cleared;
+      const statusEl = document.getElementById('reset-jobs-status');
+      statusEl.textContent = `Cleared: ${c.rawJobFiles} jobs, ${c.scanFiles} scans, ${c.dossierFiles} dossiers, ${c.seenJobs} cached`;
+      statusEl.style.color = 'var(--green)';
+      setTimeout(() => { statusEl.textContent = ''; }, 5000);
+      await refreshJobList();
+    } catch (err) {
+      alert(`Reset failed: ${err.message}`);
+    }
+  });
+
+  // Save dedup expiration days
+  document.getElementById('btn-save-dedup-days')?.addEventListener('click', async () => {
+    const input = document.getElementById('settings-dedup-days');
+    const days = parseInt(input?.value);
+    if (!days || days < 1 || days > 90) { alert('Enter a value between 1 and 90 days.'); return; }
+    try {
+      await api('/settings', { method: 'PUT', body: { dedupeExpirationDays: days } });
+      const statusEl = document.getElementById('dedup-days-status');
+      statusEl.textContent = 'Saved';
+      statusEl.style.color = 'var(--green)';
+      setTimeout(() => { statusEl.textContent = ''; }, 2000);
+    } catch (err) {
+      alert(`Failed to save: ${err.message}`);
+    }
+  });
+
   // Load fetch status on init
   loadFetchStatus();
 }
@@ -414,9 +498,15 @@ async function loadSettingsUI() {
       <p><strong>Scanner:</strong> ${settings.prompts?.scanner ? 'Loaded' : 'Not found'}</p>
       <p><strong>Evaluator:</strong> ${settings.prompts?.evaluator ? 'Loaded' : 'Not found'}</p>
       <p style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">
-        Prompts are read from scanner/scanner-prompt.md and evaluator/HLL-job-eval-prompt.md
+        Prompts are read from scanner/scanner-prompt.md and evaluator/system.md
       </p>
     `;
+
+    // Load dedup expiration days
+    const dedupeInput = document.getElementById('settings-dedup-days');
+    if (dedupeInput) {
+      dedupeInput.value = settings.dedupeExpirationDays || 7;
+    }
 
     if (settings.lastFetchTime) {
       updateFetchStatus(`Last fetched: ${timeAgo(settings.lastFetchTime)}`);

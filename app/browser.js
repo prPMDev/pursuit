@@ -523,9 +523,18 @@ function cleanJobData(job) {
   return job;
 }
 
-function deduplicateJobs(jobs, seen) {
+function deduplicateJobs(jobs, seen, expirationDays = 7) {
   const newJobs = [];
-  const updatedSeen = { ...seen };
+  const updatedSeen = {};
+  const now = Date.now();
+  const expirationMs = expirationDays * 24 * 60 * 60 * 1000;
+
+  // Copy only non-expired entries from existing seen map
+  for (const [key, entry] of Object.entries(seen)) {
+    if (entry.date && (now - new Date(entry.date).getTime()) < expirationMs) {
+      updatedSeen[key] = entry;
+    }
+  }
 
   for (const job of jobs) {
     const key = dedupeKey(job.company, job.title);
@@ -613,6 +622,7 @@ export async function fetchJobs(searches, options = {}) {
     headless = true,
     maxPages = 3,
     getSummaries = false,
+    expirationDays = 7,
   } = options;
 
   // Ensure jobs directory exists
@@ -665,7 +675,7 @@ export async function fetchJobs(searches, options = {}) {
       }
 
       // Deduplicate
-      const { newJobs, updatedSeen } = deduplicateJobs(jobs, seen);
+      const { newJobs, updatedSeen } = deduplicateJobs(jobs, seen, expirationDays);
       Object.assign(seen, updatedSeen);
 
       if (newJobs.length > 0) {
