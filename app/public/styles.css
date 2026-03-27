@@ -604,7 +604,14 @@ body {
   max-height: 80vh;
   overflow-y: auto;
   padding: var(--space-lg) var(--space-xl);
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
 }
+
+.modal-content::-webkit-scrollbar { width: 6px; }
+.modal-content::-webkit-scrollbar-track { background: transparent; margin: var(--radius-lg) 0; }
+.modal-content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+.modal-content::-webkit-scrollbar-thumb:hover { background: var(--text-light); }
 
 .modal-wide { width: 680px; }
 
