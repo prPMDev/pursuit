@@ -24,7 +24,7 @@ Seeing real evaluations helps you:
 ## Anonymization
 
 When contributing examples:
-- **Company names:** Keep them (public job postings)
+- **Company names:** Anonymize (use "RetailCo", "HealthCorp", etc. per PRIME DIRECTIVE)
 - **Connection names:** Anonymize (use "Connection A", "Connection B", etc.)
 - **Poster names:** Anonymize or use generic titles
 - **Personal background:** Keep high-level, remove identifying details
@@ -34,7 +34,7 @@ When contributing examples:
 
 If you use the evaluators and want to share your results:
 
-1. Create a new markdown file: `YYYY-MM-DD-company-role.md`
+1. Create a new markdown file: `YYYY-MM-anonymized-company-role.md`
 2. Include:
    - LinkedIn Intelligence Report (anonymized connection names)
    - Job Fit Analysis (if you ran Step 2)
@@ -48,7 +48,7 @@ See existing examples for format reference.
 
 ### LinkedIn Intelligence Examples
 
-- **[2025-01-walmart-principal-pm.md](2025-01-walmart-principal-pm.md)** - Principal PM role at Walmart
+- **[2025-01-retailco-principal-pm.md](2025-01-retailco-principal-pm.md)** - Principal PM role at RetailCo (anonymized)
   - **Network:** 17 connections, warm bridge via mutual connection
   - **Poster:** Direct hiring manager (not recruiter)
   - **Timing:** Fresh (2h old), actively promoted

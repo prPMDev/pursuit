@@ -34,7 +34,7 @@
 **Role:** Principal, Product Manager - Core API Platform & Enablement
 **Level:** Principal (Senior/Staff equivalent)
 **Company:** RetailCo
-**Location:** Sunnyvale, CA (On-site)
+**Location:** [Bay Area, CA] (On-site)
 **Salary:** $143K/yr - $286K/yr
 **Benefits:** 401(k), stock purchase plan, paid maternity/parental leave, PTO, incentive awards
 **Posted on Job Board:** 4 days ago
@@ -92,7 +92,7 @@
 
 ⚠️ "Part-time" tag on job listing appears to be an error for a Principal PM role
 ⚠️ Application managed off-LinkedIn (external redirect)
-⚠️ On-site required (Sunnyvale, CA) - relocation may be needed
+⚠️ On-site required ([Bay Area, CA]) - relocation may be needed
 
 ### 8. Decision: PURSUE ✅
 
