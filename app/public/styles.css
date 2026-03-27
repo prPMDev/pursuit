@@ -1178,94 +1178,48 @@ textarea:focus { outline: 2px solid var(--text); outline-offset: -1px; }
 
 /* --- Utility --- */
 
-/* --- Inline Actions --- */
+/* --- Row Actions (always-visible text buttons) --- */
 
-.inline-actions {
+.row-actions {
   display: flex;
   align-items: center;
-  gap: 2px;
-  opacity: 0;
-  transition: opacity 0.15s;
+  gap: 6px;
 }
 
-.tabulator-row:hover .inline-actions,
-.tabulator-row.tabulator-selected .inline-actions,
-.inline-actions:focus-within { opacity: 1; }
-
-.btn-inline {
-  width: 26px;
-  height: 26px;
-  border: none;
-  background: transparent;
+.btn-action {
+  border: 1px solid var(--border);
+  background: var(--bg-panel);
   cursor: pointer;
   border-radius: var(--radius);
-  color: var(--text-muted);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-family: var(--font);
+  font-weight: 500;
+  padding: 3px 10px;
   transition: all 0.15s;
+  white-space: nowrap;
 }
 
-.btn-inline:hover { background: var(--bg-hover); }
-.btn-inline.btn-inline-eval:hover { color: var(--blue); }
-.btn-inline.btn-inline-pass:hover { color: var(--red); }
-.btn-inline.btn-inline-save:hover { color: var(--blue); }
-.btn-inline:disabled { opacity: 0.3; cursor: not-allowed; }
-.btn-inline:disabled:hover { background: transparent; }
+.btn-action:hover { background: var(--bg-hover); }
+.btn-action-consider:hover { color: var(--green); border-color: var(--green-border); }
+.btn-action-pass:hover { color: var(--red); border-color: var(--red-border); }
 
-.btn-inline.btn-inline-saved { color: var(--blue); }
-
-.btn-inline-loading svg {
-  animation: spin 0.8s linear infinite;
+.btn-action.btn-action-active {
+  opacity: 0.4;
+  cursor: default;
 }
+.btn-action:disabled { cursor: default; }
 
-/* Row states from inline actions */
-.tabulator-row.row-passed { opacity: 0.4; }
-.tabulator-row.row-passed .tabulator-cell { text-decoration: line-through; color: var(--text-muted); }
-.tabulator-row.row-passed .inline-actions { opacity: 0.6; }
-.tabulator-row.row-saved { background: var(--blue-bg); }
+/* Row states */
+.tabulator-row.row-passed { opacity: 0.35; }
+.tabulator-row.row-passed .tabulator-cell { color: var(--text-muted); }
+.tabulator-row.row-consider { border-left: 3px solid var(--green); }
 
-/* Cell overflow for inline actions */
+/* Signal column */
+.cell-signal-text { color: var(--text-muted); font-size: 12px; }
+
+/* Cell overflow for actions */
 .tabulator .tabulator-cell.cell-actions { overflow: visible !important; }
-
-/* --- Bulk Action Bar --- */
-
-.bulk-bar {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 10px 24px;
-  background: var(--text);
-  color: #fafaf9;
-  font-size: 13px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  z-index: 50;
-  animation: slideUp 0.2s ease;
-}
-
-.bulk-bar-count {
-  font-weight: 600;
-  min-width: 100px;
-}
-
-.bulk-bar .btn {
-  background: transparent;
-  color: #fafaf9;
-  border-color: rgba(250,250,249,0.3);
-  font-size: 12px;
-  padding: 4px 12px;
-}
-
-.bulk-bar .btn:hover {
-  background: rgba(250,250,249,0.15);
-  border-color: rgba(250,250,249,0.5);
-}
-
-.bulk-bar-spacer { flex: 1; }
 
 .hidden { display: none !important; }
 
