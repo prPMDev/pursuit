@@ -1,6 +1,6 @@
 // Pursuit Dashboard — Settings panel (structured search config)
 import { api, showLoading, hideLoading, health } from './app.js';
-import { showModal, hideModal } from './modal.js';
+import { showModal, hideModal, createModal } from './modal.js';
 import { refreshJobList } from './job-list.js';
 import { html } from './util.js';
 import { icon } from './icons.js';
@@ -366,7 +366,7 @@ export function initSettings() {
     e.preventDefault();
     try {
       const { content } = await api('/decisions');
-      alert(content || 'No decisions logged yet.');
+      showDecisionsModal(content);
     } catch (err) {
       alert(`Failed to load decisions: ${err.message}`);
     }
@@ -514,6 +514,55 @@ async function loadSettingsUI() {
   } catch (err) {
     console.error('Failed to load settings:', err);
   }
+}
+
+let decisionsModal = null;
+
+function showDecisionsModal(content) {
+  if (!decisionsModal) {
+    decisionsModal = createModal('modal-decisions', { title: 'Decision Log', wide: true });
+  }
+
+  const body = decisionsModal.contentEl;
+
+  // Parse markdown table into rows
+  const lines = (content || '').split('\n').filter(l => l.startsWith('|') && !l.includes('---'));
+  if (lines.length <= 1) {
+    body.innerHTML = '<p class="text-muted" style="padding: 16px 0;">No decisions logged yet. Pass or save jobs to start building your decision history.</p>';
+    decisionsModal.show();
+    return;
+  }
+
+  const headers = lines[0].split('|').map(c => c.trim()).filter(Boolean);
+  const rows = lines.slice(1).map(line => line.split('|').map(c => c.trim()).filter(Boolean));
+
+  const decisionColors = {
+    'PASS': 'var(--red)',
+    'SAVED': 'var(--green)',
+    'CONSIDER': 'var(--blue)',
+    'MAYBE': 'var(--amber)',
+  };
+
+  body.innerHTML = `
+    <p class="modal-hint" style="margin-bottom: 12px;">${rows.length} decision${rows.length !== 1 ? 's' : ''} logged</p>
+    <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+      <thead>
+        <tr>${headers.map(h => `<th style="text-align: left; padding: 6px 8px; border-bottom: 2px solid var(--border); color: var(--text-muted); font-weight: 500; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">${escapeHtml(h)}</th>`).join('')}</tr>
+      </thead>
+      <tbody>
+        ${rows.map(cols => `<tr style="border-bottom: 1px solid var(--border-light);">
+          ${cols.map((c, i) => {
+            const isDecision = headers[i] === 'Decision';
+            const color = isDecision ? (decisionColors[c.toUpperCase()] || 'inherit') : 'inherit';
+            const weight = isDecision ? 'font-weight: 600;' : '';
+            return `<td style="padding: 6px 8px; color: ${color}; ${weight}">${escapeHtml(c)}</td>`;
+          }).join('')}
+        </tr>`).join('')}
+      </tbody>
+    </table>
+  `;
+
+  decisionsModal.show();
 }
 
 function escapeHtml(str) {
