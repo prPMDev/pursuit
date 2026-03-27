@@ -18,7 +18,6 @@
     "node": ">=18.0.0"
   },
   "devDependencies": {
-    "@picocss/pico": "^2.1.1",
     "@shoelace-style/shoelace": "^2.20.1",
     "tabulator-tables": "^6.3.1"
   }
