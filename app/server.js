@@ -175,35 +175,17 @@ async function readDossier(id) {
   return readMarkdown(join(DOSSIERS_DIR, `${id}.md`));
 }
 
-async function callClaude(systemPrompt, userMessage) {
-  if (!API_KEY || API_KEY === 'sk-ant-your-key-here') {
-    throw new Error('ANTHROPIC_API_KEY not configured. Add it to app/.env');
+// Convenience wrapper — uses the configured AI provider (or falls back to env key)
+async function callAI(systemPrompt, userMessage) {
+  const provider = settings.ai?.provider || 'anthropic';
+  const key = settings.ai?.key || API_KEY;
+  const model = settings.ai?.model || null;
+
+  if (!key || key === 'sk-ant-your-key-here') {
+    throw new Error('No API key configured. Add one via Settings or app/.env');
   }
 
-  const resp = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': API_KEY,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 4096,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: userMessage }],
-    }),
-  });
-
-  if (!resp.ok) {
-    const err = await resp.text();
-    if (resp.status === 401) throw new Error('Invalid API key');
-    if (resp.status === 429) throw new Error('Rate limited — try again in a minute');
-    throw new Error(`Anthropic API error (${resp.status}): ${err}`);
-  }
-
-  const data = await resp.json();
-  return data.content[0].text;
+  return callAIProvider(provider, key, model, systemPrompt, userMessage);
 }
 
 async function loadSettings() {
@@ -606,7 +588,7 @@ app.post('/api/scan', async (req, res) => {
     }
 
     const userMessage = `## My Profile\n\n${profile}${referencesContext}\n\n## Job Listings\n\n${listings}`;
-    const result = await callClaude(scannerPrompt, userMessage);
+    const result = await callAI(scannerPrompt, userMessage);
 
     // Write to data/scans/
     const filename = `${datePrefix()}-batch.md`;
@@ -678,7 +660,7 @@ app.post('/api/evaluate/:id', async (req, res) => {
       jobDescription ? `## Job Description\n\n${jobDescription}` : '',
     ].filter(Boolean);
 
-    const result = await callClaude(systemPrompt, userParts.join('\n\n'));
+    const result = await callAI(systemPrompt, userParts.join('\n\n'));
 
     // Append evaluation to living dossier
     await appendToDossier(id, `## Evaluator Assessment\n**Date:** ${datePrefix()}\n${result}`);
@@ -727,7 +709,7 @@ app.post('/api/evaluate/:id/follow-up', async (req, res) => {
       `## My Question\n\n${question}`,
     ].filter(Boolean);
 
-    const result = await callClaude(systemPrompt, userParts.join('\n\n'));
+    const result = await callAI(systemPrompt, userParts.join('\n\n'));
 
     // Append follow-up to living dossier
     await appendToDossier(id, `## Follow-ups\n### ${datePrefix()} — "${question}"\n${result}`);
@@ -829,13 +811,13 @@ function generateSearchQueries(config) {
 
 // --- AI Configuration ---
 
-// Multi-provider AI call helper
-async function callAI(provider, key, model, systemPrompt, userMessage) {
+// Multi-provider AI call — routes to Anthropic, OpenAI, or Gemini
+async function callAIProvider(provider, key, model, systemPrompt, userMessage) {
   if (provider === 'anthropic') {
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: model || 'claude-sonnet-4-20250514', max_tokens: 4096, system: systemPrompt, messages: [{ role: 'user', content: userMessage }] }),
+      body: JSON.stringify({ model: model || 'claude-sonnet-4-6-20250627', max_tokens: 4096, system: systemPrompt, messages: [{ role: 'user', content: userMessage }] }),
     });
     if (!resp.ok) {
       if (resp.status === 401) throw new Error('Invalid API key');
@@ -850,7 +832,7 @@ async function callAI(provider, key, model, systemPrompt, userMessage) {
     const resp = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-      body: JSON.stringify({ model: model || 'gpt-4o', max_tokens: 4096, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userMessage }] }),
+      body: JSON.stringify({ model: model || 'gpt-5.4', max_tokens: 4096, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userMessage }] }),
     });
     if (!resp.ok) {
       if (resp.status === 401) throw new Error('Invalid API key');
@@ -862,7 +844,7 @@ async function callAI(provider, key, model, systemPrompt, userMessage) {
   }
 
   if (provider === 'gemini') {
-    const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model || 'gemini-2.0-flash'}:generateContent?key=${key}`, {
+    const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model || 'gemini-3-flash-preview'}:generateContent?key=${key}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ systemInstruction: { parts: [{ text: systemPrompt }] }, contents: [{ parts: [{ text: userMessage }] }] }),
@@ -881,16 +863,18 @@ async function callAI(provider, key, model, systemPrompt, userMessage) {
 
 const AI_MODELS = {
   anthropic: [
-    { id: 'claude-sonnet-4-20250514', name: 'Claude Sonnet 4', default: true },
-    { id: 'claude-haiku-4-20250414', name: 'Claude Haiku 4 (faster, cheaper)' },
+    { id: 'claude-sonnet-4-6-20250627', name: 'Claude Sonnet 4.6', default: true },
+    { id: 'claude-opus-4-6-20250627', name: 'Claude Opus 4.6 (most capable)' },
+    { id: 'claude-haiku-4-5-20251001', name: 'Claude Haiku 4.5 (faster, cheaper)' },
   ],
   openai: [
-    { id: 'gpt-4o', name: 'GPT-4o', default: true },
-    { id: 'gpt-4o-mini', name: 'GPT-4o Mini (faster, cheaper)' },
+    { id: 'gpt-5.4', name: 'GPT-5.4', default: true },
+    { id: 'gpt-5.4-mini', name: 'GPT-5.4 Mini (faster, cheaper)' },
+    { id: 'gpt-4o', name: 'GPT-4o (legacy)' },
   ],
   gemini: [
-    { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', default: true },
-    { id: 'gemini-2.5-pro-preview-05-06', name: 'Gemini 2.5 Pro' },
+    { id: 'gemini-3-flash-preview', name: 'Gemini 3 Flash (preview)', default: true },
+    { id: 'gemini-3.1-pro-preview', name: 'Gemini 3.1 Pro (preview, most capable)' },
   ],
 };
 
@@ -900,7 +884,7 @@ app.post('/api/ai/test', async (req, res) => {
     const { provider, key } = req.body;
     if (!provider || !key) return res.status(400).json({ error: 'Provider and key required' });
 
-    await callAI(provider, key, null, 'Respond with exactly: ok', 'ping');
+    await callAIProvider(provider, key, null, 'Respond with exactly: ok', 'ping');
     res.json({ success: true, models: AI_MODELS[provider] || [] });
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -914,7 +898,7 @@ app.post('/api/ai/configure', async (req, res) => {
     settings.ai = { provider, key, model };
     await saveSettings();
 
-    // Update in-memory API_KEY so callClaude works immediately
+    // Update in-memory API_KEY so callAI works immediately
     if (provider === 'anthropic') {
       API_KEY = key;
       process.env.ANTHROPIC_API_KEY = key;
@@ -973,7 +957,7 @@ Domains: ${(formData.domains || []).join(', ') || '(any)'}
 Target levels: ${(formData.levels || []).join(', ') || '(any)'}
 Company size preference: ${(formData.companySize || []).join(', ') || '(any)'}`;
 
-    const profile = await callAI(provider, key, model, systemPrompt, userMessage);
+    const profile = await callAIProvider(provider, key, model, systemPrompt, userMessage);
     res.json({ profile });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -1091,7 +1075,7 @@ app.post('/api/setup/chat', async (req, res) => {
       userMsg = buildSynthesisContext(conversationHistory || {});
     }
 
-    const response = await callClaude(systemPrompt, userMsg);
+    const response = await callAI(systemPrompt, userMsg);
 
     // Extract any structured data from response
     const extracted = extractJSON(response);
@@ -1404,7 +1388,7 @@ app.post('/api/fetch-and-scan', async (req, res) => {
 
     const scannerPrompt = await readMarkdown(SCANNER_PROMPT);
     const userMessage = `## My Profile\n\n${profile}\n\n## Job Listings\n\n${allListings}`;
-    const scanResult = await callClaude(scannerPrompt, userMessage);
+    const scanResult = await callAI(scannerPrompt, userMessage);
 
     const scanFilename = `${datePrefix()}-auto-scan.md`;
     await writeFile(join(DATA, 'scans', scanFilename), scanResult);
