@@ -1,111 +1,149 @@
 # Pursuit
 
-**Job search dashboard. Quality over volume. Fit over desperation.**
+![Node](https://img.shields.io/badge/Node-18%2B-339933?logo=nodedotjs&logoColor=white)
+![Express](https://img.shields.io/badge/Express-4.x-000000?logo=express&logoColor=white)
+![AI](https://img.shields.io/badge/AI-Claude%20%7C%20GPT%20%7C%20Gemini-blueviolet)
+![Status](https://img.shields.io/badge/Status-v1%20Working-brightgreen)
+![License](https://img.shields.io/badge/License-MIT-blue)
 
-Pursuit is a local-first tool that finds the 3-5 jobs worth your time — not 500 to spray at. It uses Claude to filter job listings against your professional identity, not keywords.
+**Job search system built on one belief: you should pursue 5 great fits, not spray 500 applications.**
 
----
-
-## Prerequisites
-
-- **Node.js 18+**
-- **Anthropic API key** — [console.anthropic.com](https://console.anthropic.com/)
-- **Chrome or Chromium** — required for auto-fetching jobs from LinkedIn/Indeed (optional if you paste listings manually)
-
-## Setup
-
-```bash
-cd app
-npm install
-cp .env.example .env
-# Edit .env — add your ANTHROPIC_API_KEY
-npm start
-```
-
-Open [http://localhost:3000](http://localhost:3000). On first run, Pursuit walks you through a 5-minute setup conversation to build your professional profile and calibrate the scanner.
-
-### Chrome login (for auto-fetch)
-
-If you want Pursuit to browse LinkedIn/Indeed for you:
-
-```bash
-npm run login
-```
-
-This opens a visible Chrome window. Log into LinkedIn and Indeed, then close the browser. Your session cookies are saved in your Chrome profile — Pursuit uses your existing logged-in session, not your credentials.
-
-**Note:** Chrome must be closed when Pursuit fetches. Puppeteer can't share a profile with a running Chrome instance. If Chrome is open, it falls back to a temporary profile (no saved logins).
+Pursuit uses AI to filter job listings against your professional identity — not keywords. It runs locally, keeps your data on your machine, and caps fetches at 3/day so you spend time pursuing, not pulling.
 
 ---
 
-## How it works
+## Quick Start
 
-### 1. Build your profile (one-time setup)
+```bash
+cd app && npm install
+cp .env.example .env    # Add your API key (Anthropic, OpenAI, or Gemini)
+npm start               # http://localhost:3000
+```
 
-A conversational flow asks about your background, logistics, and non-negotiables. You paste 3 example listings (one you love, one you hate, one you're torn on) to calibrate the scanner. Result: a professional profile in `data/profile.md` and reference examples in `data/references/`.
+On first run, a guided setup builds your professional profile and calibrates the scanner with example listings you provide.
 
-### 2. Get listings
+### Auto-fetch from LinkedIn/Indeed (optional)
 
-Two ways:
-- **Fetch Jobs** — Puppeteer opens Chrome with your logged-in session, browses LinkedIn/Indeed using your configured search queries, scrapes job cards + JD summaries. Capped at 3 fetches/day.
+```bash
+npm run login           # Opens Chrome — log into LinkedIn/Indeed, then close
+```
+
+Pursuit uses your existing browser session (not your credentials). Chrome must be closed during fetches — Puppeteer can't share a running profile.
+
+---
+
+## How It Works
+
+### 1. Profile Setup (one-time)
+A conversational flow captures your background, logistics, and non-negotiables. You provide 3 example listings (love, hate, torn) to calibrate the AI scanner.
+
+### 2. Get Listings
+- **Fetch Jobs** — Puppeteer browses LinkedIn/Indeed with your search queries. Capped at 3/day.
 - **Add Jobs** — Paste listings manually from any source. No Chrome needed.
 
 ### 3. Scan
+AI reads your profile + calibration examples + the batch and filters each listing:
+- **Consider** — worth 5 more minutes of your time
+- **Maybe** — borderline, worth a second look
+- **Pass** — filtered out
 
-Claude reads your profile + reference examples + the batch of listings and filters each one:
-- **CONSIDER** — worth 5 more minutes of your time
-- **MAYBE** — borderline, worth a second look
-- **PASS** — filtered out
-
-Each job gets a narrative explanation ("this is your integrations story applied to healthcare") plus risk tagging (Safe Play vs Stretch).
+Each job gets a narrative explanation plus risk tagging (Safe Play vs Stretch).
 
 ### 4. Evaluate (on-demand)
+Click any job to run the evaluator for deep analysis: match type, level fit, red flags, and a Pursue/Maybe/Pass decision with reasoning.
 
-Click any job and run the evaluator for deep analysis: match type, level fit, red flags, and a PURSUE/MAYBE/PASS decision with reasoning.
-
-### 5. Decide and track
-
-Pursue, Pass, or Save each job. Track through Applied → Interview → Offered/Rejected. Decisions are logged to `data/decisions.md`.
+### 5. Decide and Track
+Pass, Save, or Pursue each job. Decisions are logged immutably. Reset your search focus anytime without losing your decision history.
 
 ---
 
-## Project structure
+## Features
+
+| Feature | Status |
+|---------|--------|
+| AI scanner with 3-gate filtering | Shipped |
+| Multi-provider AI (Anthropic, OpenAI, Gemini) | Shipped |
+| LinkedIn + Indeed auto-fetch | Shipped |
+| Manual job paste | Shipped |
+| Deep evaluator with dossier generation | Shipped |
+| Dedup with configurable expiration | Shipped |
+| Force reset when search focus changes | Shipped |
+| Inline table actions (Pass/Save/Evaluate) | Shipped |
+| Decision log with modal viewer | Shipped |
+| SQLite migration | Planned |
+| Application strategy engine | Planned |
+| Content generation (cover letters, etc.) | Planned |
+
+---
+
+## Architecture
 
 ```
 app/
-  server.js          Express server + API routes
-  browser.js         Puppeteer job scraper (LinkedIn, Indeed)
-  setup.js           Conversational setup flow definitions
-  public/            Frontend (vanilla JS, no build step)
-    index.html       HTML shell
-    styles.css       Design system
-    js/              Modular JS (app, job-list, job-detail, etc.)
+  server.js            Express server + all API routes
+  browser.js           Puppeteer scraper (LinkedIn, Indeed)
+  setup.js             Guided onboarding flow
+  public/              Frontend (vanilla JS + Tabulator, no build step)
+    js/                Modular ES6 (app, job-list, job-detail, settings, etc.)
+    styles.css         Design system (warm stone palette, 4px grid)
 
-scanner/
-  scanner-prompt.md  Scanner system prompt
-  my-profile-template.md  Profile template
+scanner/               Scanner prompt system
+  scanner-prompt.md    3-gate filter prompt (non-negotiables → profile match → decision)
+  my-profile-template.md
 
-evaluator/
-  HLL-job-eval-prompt.md  Evaluator system prompt
+evaluator/             Evaluator prompt system
+  system.md            Evaluator system prompt
+  initial-eval.md      First-pass evaluation
+  follow-up.md         Deep-dive follow-up
 
-data/                Local data (gitignored except structure)
-  profile.md         Your professional profile
-  settings.json      Search queries + fetch history
-  jobs/              Raw fetched listings (markdown)
-  scans/             Scanner output (parsed into job list)
-  evaluations/       Evaluator results (one per job)
-  references/        Reference examples for calibration
-  decisions.md       Decision log
+data/                  All local, gitignored
+  profile.md           Your professional profile
+  settings.json        Search config, AI provider, fetch history
+  .seen-jobs.json      Dedup cache (auto-expires after configurable days)
+  decisions.md         Immutable decision log
+  jobs/                Raw fetched listings
+  scans/               Scanner output batches
+  dossiers/            Per-job dossiers (created at runtime)
+  evaluations/         Deep evaluation results
+  references/          Calibration examples (love/hate/torn)
+
+generator/             Content generation (planned)
+strategist/            Application strategy (planned)
+tracking/              Pipeline tracking (planned)
 ```
 
-## System checks
+---
+
+## Configuration
+
+### AI Provider
+
+Pursuit supports three AI providers. Configure in Settings or `.env`:
+
+| Provider | Models | Key format |
+|----------|--------|------------|
+| **Anthropic** (default) | Claude Sonnet, Opus, Haiku | `sk-ant-...` |
+| **OpenAI** | GPT-4o, GPT-4 Turbo | `sk-proj-...` |
+| **Google Gemini** | Gemini 2.0 Flash, 2.5 Pro | `AIza...` |
+
+### Data Management
+
+Settings modal includes:
+- **Dedup expiration** — seen jobs auto-expire after N days (default 7) so reposted listings resurface
+- **Clear Seen Jobs Cache** — light reset, keeps your jobs and decisions
+- **Reset All Job Data** — clears everything except decisions and profile
+- **Reset Profile** — restart onboarding
+
+When you change search titles or locations, Pursuit prompts you to clear the dedup cache.
+
+### System Checks
 
 On startup, Pursuit checks:
-- **API key** — required for scan/evaluate. Shown in topbar if missing.
-- **Chrome binary** — required for Fetch Jobs. If not found, Fetch is disabled but Add Jobs + Scan still work.
-- **Chrome profile** — if not found, fetches use a temporary profile (no saved logins).
+- **API key** — required for scan/evaluate. Configurable in Settings UI.
+- **Chrome binary** — required for Fetch Jobs. Add Jobs + Scan work without it.
+- **Chrome profile** — falls back to temporary profile if not found.
 
-These are checked once at startup and exposed at `/api/health`. No polling or periodic pings — re-checked on failure.
+Exposed at `/api/health`. Re-checked on failure, no polling.
 
 ---
 
@@ -115,8 +153,15 @@ These are checked once at startup and exposed at `/api/health`. No polling or pe
 - **Identity over keywords.** "Integrations PM" and "Platform Partnerships" might be the same role for the same person.
 - **Adjacent is OK.** Structural skills transfer across domains.
 - **Local-first.** Your data stays on your machine. No accounts, no cloud, no tracking.
+- **Quality over volume.** The scanner should return 5-10 relevant jobs, not 50.
 
 ---
+
+## Contributing
+
+Pursuit is open-source. Everything committed here should be generic, reusable, and free of personal information. See [CLAUDE.md](CLAUDE.md) for development guidelines.
+
+Track decisions and architecture in [GitHub Issues](../../issues).
 
 ## License
 
