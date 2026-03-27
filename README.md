@@ -3,7 +3,7 @@
 ![Node](https://img.shields.io/badge/Node-18%2B-339933?logo=nodedotjs&logoColor=white)
 ![Express](https://img.shields.io/badge/Express-4.x-000000?logo=express&logoColor=white)
 ![AI](https://img.shields.io/badge/AI-Claude%20%7C%20GPT%20%7C%20Gemini-blueviolet)
-![Status](https://img.shields.io/badge/Status-v1%20Working-brightgreen)
+![Status](https://img.shields.io/badge/Status-Active%20Development-yellow)
 ![License](https://img.shields.io/badge/License-MIT-blue)
 
 **Job search system built on one belief: you should pursue 5 great fits, not spray 500 applications.**
