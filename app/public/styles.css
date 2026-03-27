@@ -1201,7 +1201,7 @@ textarea:focus { outline: 2px solid var(--text); outline-offset: -1px; }
 }
 
 .btn-action:hover { background: var(--bg-hover); }
-.btn-action-consider:hover { color: var(--green); border-color: var(--green-border); }
+.btn-action-eval:hover { color: var(--blue); border-color: var(--blue-border); }
 .btn-action-pass:hover { color: var(--red); border-color: var(--red-border); }
 
 .btn-action.btn-action-active {
@@ -1213,7 +1213,7 @@ textarea:focus { outline: 2px solid var(--text); outline-offset: -1px; }
 /* Row states */
 .tabulator-row.row-passed { opacity: 0.35; }
 .tabulator-row.row-passed .tabulator-cell { color: var(--text-muted); }
-.tabulator-row.row-consider { border-left: 3px solid var(--green); }
+.tabulator-row.row-consider { border-left: 3px solid var(--blue); }
 
 /* Signal column */
 .cell-signal-text { color: var(--text-muted); font-size: 12px; }

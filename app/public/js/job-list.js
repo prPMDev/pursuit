@@ -48,7 +48,9 @@ function actionsFormatter(cell) {
   const data = cell.getRow().getData();
   const action = normalizeAction(data.action);
   const isPassed = data.decision === 'PASS' || action === 'PASS';
-  const isConsidered = data.decision === 'CONSIDER' || data.decision === 'SAVED' || action === 'CONSIDER';
+  const hasEval = data.hasEvaluation;
+  const isEvaluating = data._evaluating;
+  const hasApi = health.apiKeyConfigured;
 
   // Don't show triage actions for pipeline jobs
   if (data.decision === 'pursue' || data.pipelineStatus === 'pursuing' ||
@@ -56,34 +58,68 @@ function actionsFormatter(cell) {
     return '';
   }
 
-  const considerBtn = isConsidered
-    ? `<button class="btn-action btn-action-consider btn-action-active" disabled>Considered</button>`
-    : `<button class="btn-action btn-action-consider">Consider</button>`;
+  let evalBtn;
+  if (isEvaluating) {
+    evalBtn = `<button class="btn-action btn-action-eval btn-action-active" disabled>Evaluating\u2026</button>`;
+  } else if (hasEval) {
+    evalBtn = `<button class="btn-action btn-action-eval btn-action-active" disabled>Evaluated</button>`;
+  } else if (!hasApi) {
+    evalBtn = `<button class="btn-action btn-action-eval" disabled title="Add API key in Settings">Evaluate</button>`;
+  } else {
+    evalBtn = `<button class="btn-action btn-action-eval">Evaluate</button>`;
+  }
 
   const passBtn = isPassed
     ? `<button class="btn-action btn-action-pass btn-action-active" disabled>Passed</button>`
     : `<button class="btn-action btn-action-pass">Pass</button>`;
 
-  return `<div class="row-actions">${considerBtn}${passBtn}</div>`;
+  return `<div class="row-actions">${evalBtn}${passBtn}</div>`;
 }
 
 // --- Action handlers ---
 
-async function inlineConsider(jobId) {
+async function inlineEvaluate(jobId) {
   const job = allJobs.find(j => j.id === jobId);
-  if (!job) return;
+  if (!job || !health.apiKeyConfigured) return;
+
+  // Set loading state
+  job._evaluating = true;
+  const row = table.getRows().find(r => r.getData().id === jobId);
+  if (row) row.reformat();
 
   try {
-    await api('/decisions', {
+    const desc = [
+      `Company: ${job.company}`,
+      `Role: ${job.role}`,
+      job.location ? `Location: ${job.location}` : '',
+      job.source ? `Source: ${job.source}` : '',
+      job.link ? `Link: ${job.link}` : '',
+      job.summary ? `Summary:\n${job.summary}` : '',
+      job.keySignal ? `Key signal: ${job.keySignal}` : '',
+      job.narrative ? `Scanner notes: ${job.narrative}` : '',
+    ].filter(Boolean).join('\n');
+
+    const result = await api(`/evaluate/${jobId}`, {
       method: 'POST',
-      body: { company: job.company, role: job.role, scannerAction: job.action, decision: 'CONSIDER' },
+      body: { jobDescription: desc, dossierFile: job.dossierFile },
     });
-    job.decision = 'CONSIDER';
+
+    job._evaluating = false;
+    job.hasEvaluation = true;
+    job.evaluation = result.result;
     job.action = 'CONSIDER';
-    const row = table.getRows().find(r => r.getData().id === jobId);
-    if (row) row.reformat();
+    job.decision = 'CONSIDER';
+
+    const row2 = table.getRows().find(r => r.getData().id === jobId);
+    if (row2) row2.reformat();
+
+    // Open detail panel to show evaluation result
+    showJobDetail(job);
   } catch (err) {
-    console.error('Failed to consider:', err);
+    job._evaluating = false;
+    const row2 = table.getRows().find(r => r.getData().id === jobId);
+    if (row2) row2.reformat();
+    console.error('Evaluation failed:', err);
   }
 }
 
@@ -219,8 +255,8 @@ export function initJobList() {
     if (!tabulatorRow) return;
     const jobId = tabulatorRow.getData().id;
 
-    if (btn.classList.contains('btn-action-consider')) {
-      inlineConsider(jobId);
+    if (btn.classList.contains('btn-action-eval')) {
+      inlineEvaluate(jobId);
     } else if (btn.classList.contains('btn-action-pass')) {
       inlinePass(jobId);
     }
