@@ -26,9 +26,9 @@ export function initJobDetail() {
     logDecision('PURSUING');
     showPipeline('pursuing');
   });
-  document.getElementById('btn-pass').addEventListener('click', () => {
-    logDecision('PASS');
-    // Don't show pipeline for passed jobs — just give feedback and refresh list
+  document.getElementById('btn-pass').addEventListener('click', async () => {
+    await logDecision('PASS');
+    // Don't show pipeline for passed jobs — just refresh list after decision is persisted
     refreshJobList();
   });
   document.getElementById('btn-save-later').addEventListener('click', () => {

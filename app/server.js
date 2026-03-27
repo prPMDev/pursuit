@@ -11,7 +11,6 @@ const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const ROOT = resolve(__dirname, '..');
 const DATA = join(ROOT, 'data');
 const SCANNER_PROMPT = join(ROOT, 'scanner', 'scanner-prompt.md');
-const EVALUATOR_PROMPT = join(ROOT, 'evaluator', 'HLL-job-eval-prompt.md');
 const EVALUATOR_SYSTEM = join(ROOT, 'evaluator', 'system.md');
 const EVALUATOR_INITIAL = join(ROOT, 'evaluator', 'initial-eval.md');
 const EVALUATOR_FOLLOWUP = join(ROOT, 'evaluator', 'follow-up.md');
@@ -751,16 +750,15 @@ app.post('/api/decisions', async (req, res) => {
 
 // Settings
 app.get('/api/settings', async (req, res) => {
-  // Include prompt info
   const scannerPrompt = await readMarkdown(SCANNER_PROMPT);
-  const evalPrompt = await readMarkdown(EVALUATOR_PROMPT);
+  const evalSystem = await readMarkdown(EVALUATOR_SYSTEM);
 
   res.json({
     ...settings,
     apiKeyConfigured: !!(API_KEY && API_KEY !== 'sk-ant-your-key-here'),
     prompts: {
       scanner: scannerPrompt ? scannerPrompt.substring(0, 200) + '...' : null,
-      evaluator: evalPrompt ? evalPrompt.substring(0, 200) + '...' : null,
+      evaluator: evalSystem ? evalSystem.substring(0, 200) + '...' : null,
     },
   });
 });
