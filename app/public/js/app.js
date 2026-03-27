@@ -81,40 +81,28 @@ function renderLoadingOverlay() {
 // --- Profile Strip ---
 
 export async function updateProfileStrip() {
+  const el = document.getElementById('profile-strip-text');
   try {
-    const { content } = await api('/profile');
-    if (!content || content.includes('Customize This Section') || content.includes('<!-- Example:')) {
-      document.getElementById('profile-strip-text').textContent =
-        'No profile set — click Profile to get started';
+    // Show search config (what you're actually searching for) over static profile fields
+    const settings = await api('/settings');
+    const config = settings.searchConfig;
+    if (config?.titles?.values?.length) {
+      const titles = config.titles.values.slice(0, 3).join(', ');
+      const locations = config.locations?.length ? config.locations.join(', ') : '';
+      const suffix = config.titles.values.length > 3 ? ` +${config.titles.values.length - 3} more` : '';
+      el.textContent = `Searching: ${titles}${suffix}${locations ? ' · ' + locations : ''}`;
       return;
     }
 
-    const lines = content.split('\n');
-    const parts = [];
-
-    for (const line of lines) {
-      if (line.match(/^\*\*Years of experience:\*\*/)) {
-        const val = line.replace(/\*\*/g, '').replace('Years of experience:', '').trim();
-        if (val) parts.push(val);
-      }
-      if (line.match(/^\*\*Current level:\*\*/)) {
-        const val = line.replace(/\*\*/g, '').replace('Current level:', '').trim();
-        if (val) parts.push(val);
-      }
-      if (line.match(/^\*\*Target range:\*\*/)) {
-        const val = line.replace(/\*\*/g, '').replace('Target range:', '').trim();
-        if (val) parts.push(val);
-      }
-      if (line.match(/^\*\*Location:\*\*/)) {
-        const val = line.replace(/\*\*/g, '').replace('Location:', '').trim();
-        if (val) parts.push(val);
-      }
+    // Fallback to profile if no search config
+    const { content } = await api('/profile');
+    if (!content || content.includes('Customize This Section')) {
+      el.textContent = 'No profile set — click Profile to get started';
+      return;
     }
-
-    document.getElementById('profile-strip-text').textContent =
-      parts.length > 0 ? parts.join(' · ') : 'Profile set — click Profile to edit';
+    el.textContent = 'Profile set — configure search in Settings';
   } catch {
-    document.getElementById('profile-strip-text').textContent = 'Profile not loaded';
+    el.textContent = 'Profile not loaded';
   }
 }
 

@@ -78,7 +78,7 @@
 
 /* --- Tabulator theme overrides — match warm stone palette --- */
 .tabulator {
-  --tabulator-border-color: var(--border);
+  --tabulator-border-color: var(--border-light);
   --tabulator-header-background-color: var(--bg-panel);
   --tabulator-header-text-color: var(--text-secondary);
   --tabulator-row-background-color: var(--bg-panel);
@@ -87,17 +87,19 @@
   --tabulator-row-selected-background: var(--bg-active);
   font-family: var(--font);
   font-size: 13px;
-  border: none;
-  background: transparent;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  background: var(--bg-panel);
+  overflow: hidden;
 }
 
-.tabulator .tabulator-header { border-bottom: 1px solid var(--border); }
-.tabulator .tabulator-header .tabulator-col { background: var(--bg-panel); border-right: none; }
+.tabulator .tabulator-header { border-bottom: 1px solid var(--border-light); }
+.tabulator .tabulator-header .tabulator-col { background: var(--bg-subtle); border-right: none; }
 .tabulator .tabulator-header .tabulator-col-content { padding: 8px 10px; }
 .tabulator .tabulator-header .tabulator-col-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); }
 
 .tabulator .tabulator-tableholder { overflow-y: auto; }
-.tabulator .tabulator-row { border-bottom: 1px solid var(--border-light); cursor: pointer; min-height: 42px; }
+.tabulator .tabulator-row { border-bottom: 1px solid var(--border-light); cursor: pointer; min-height: 56px; }
 .tabulator .tabulator-row:hover { background: var(--bg-hover); }
 .tabulator .tabulator-row.tabulator-selected { background: var(--bg-active); }
 .tabulator .tabulator-cell { padding: 8px 10px; border-right: none; }
@@ -1208,7 +1210,12 @@ textarea:focus { outline: 2px solid var(--text); outline-offset: -1px; }
   opacity: 0.4;
   cursor: default;
 }
-.btn-action:disabled { cursor: default; }
+.btn-action:disabled {
+  cursor: default;
+  opacity: 0.3;
+  border-color: var(--border-light);
+  color: var(--text-light);
+}
 
 /* Row states */
 .tabulator-row.row-passed { opacity: 0.35; }
