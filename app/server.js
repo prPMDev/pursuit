@@ -1436,6 +1436,16 @@ app.post('/api/fetch-and-scan', async (req, res) => {
     await writeFile(join(DATA, 'scans', scanFilename), scanResult);
 
     const parsed = parseScannerOutput(scanResult);
+
+    // Create living dossier per CONSIDER job (same as /api/scan)
+    for (const job of (parsed.jobs || [])) {
+      if (job.action && ['CONSIDER', 'EVALUATE'].includes(job.action.toUpperCase())) {
+        job.id = job.id || jobId(job.company, job.role);
+        await createDossier(job);
+        job.dossierFile = `${job.id}.md`;
+      }
+    }
+
     fetchInProgress = false;
     res.json({
       ok: true,
