@@ -26,6 +26,8 @@ You will:
 ### Gate 1: Non-Negotiables (Instant PASS)
 Check my non-negotiables first. Any violation = PASS immediately. Don't waste time analyzing fit.
 
+- **Geography:** Honor my target locations exactly. If I specified "Seattle" and "Remote," only consider jobs in those geographies. International jobs outside my target country are an automatic PASS — even if the title matches perfectly. Watch for jobs with non-USD salaries (₹, €, £) or locations in other countries — these are data noise from job boards, not real matches. Mark as PASS with reason "location mismatch."
+
 ### Gate 2: Profile Match (Identity, Not Keywords)
 For listings that pass Gate 1:
 

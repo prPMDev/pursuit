@@ -98,7 +98,7 @@
 .tabulator .tabulator-header .tabulator-col-content { padding: 8px 10px; }
 .tabulator .tabulator-header .tabulator-col-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); }
 
-.tabulator .tabulator-tableholder { overflow-y: auto; }
+.tabulator .tabulator-tableholder { overflow-y: auto; overflow-x: hidden; }
 .tabulator .tabulator-row { border-bottom: 1px solid var(--border-light); cursor: pointer; min-height: 56px; }
 .tabulator .tabulator-row:hover { background: var(--bg-hover); }
 .tabulator .tabulator-row.tabulator-selected { background: var(--bg-active); }
@@ -121,6 +121,7 @@
   letter-spacing: 0.3px;
 }
 .status-badge.consider, .status-badge.evaluate { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
+.status-badge.evaluated { background: var(--amber-bg); color: var(--amber); border: 1px solid var(--amber-border); }
 .status-badge.maybe { background: var(--amber-bg); color: var(--amber); border: 1px solid var(--amber-border); }
 .status-badge.pass, .status-badge.skip { background: var(--gray-bg); color: var(--gray); border: 1px solid var(--gray-border); }
 .status-badge.unscanned, .status-badge.new { background: var(--blue-bg); color: var(--blue); border: 1px solid var(--blue-border); }
@@ -539,12 +540,10 @@ body {
 .btn-primary:hover { background: #292524; border-color: #292524; }
 
 /* Decision action buttons */
-.btn-pursue { background: var(--green-bg); color: var(--green); border-color: var(--green-border); }
-.btn-pursue:hover { background: var(--green-border); }
+.btn-consider { background: var(--green-bg); color: var(--green); border-color: var(--green-border); }
+.btn-consider:hover { background: var(--green-border); }
 .btn-pass { background: var(--red-bg); color: var(--red); border-color: var(--red-border); }
 .btn-pass:hover { background: var(--red-border); }
-.btn-save { background: var(--blue-bg); color: var(--blue); border-color: var(--blue-border); }
-.btn-save:hover { background: var(--blue-border); }
 
 .action-buttons {
   display: flex;
@@ -1204,6 +1203,7 @@ textarea:focus { outline: 2px solid var(--text); outline-offset: -1px; }
 
 .btn-action:hover { background: var(--bg-hover); }
 .btn-action-eval:hover { color: var(--blue); border-color: var(--blue-border); }
+.btn-action-consider:hover { color: var(--green); border-color: var(--green-border); }
 .btn-action-pass:hover { color: var(--red); border-color: var(--red-border); }
 
 .btn-action.btn-action-active {

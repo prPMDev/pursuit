@@ -501,8 +501,8 @@ app.get('/api/jobs', async (req, res) => {
       const decision = decisionsIndex[job.id];
       if (decision) {
         job.decision = decision;
-        // Upgrade action for Pass decisions so badge shows correctly
-        if (decision === 'PASS' && job.action !== 'PASS') job.action = 'PASS';
+        // Upgrade action for decisions so badge shows correctly
+        if (decision !== job.action) job.action = decision;
       }
     }
 
@@ -817,7 +817,7 @@ async function callAIProvider(provider, key, model, systemPrompt, userMessage) {
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: model || 'claude-sonnet-4-6-20250627', max_tokens: 4096, system: systemPrompt, messages: [{ role: 'user', content: userMessage }] }),
+      body: JSON.stringify({ model: model || 'claude-sonnet-4-20250514', max_tokens: 4096, system: systemPrompt, messages: [{ role: 'user', content: userMessage }] }),
     });
     if (!resp.ok) {
       if (resp.status === 401) throw new Error('Invalid API key');
@@ -863,8 +863,8 @@ async function callAIProvider(provider, key, model, systemPrompt, userMessage) {
 
 const AI_MODELS = {
   anthropic: [
-    { id: 'claude-sonnet-4-6-20250627', name: 'Claude Sonnet 4.6', default: true },
-    { id: 'claude-opus-4-6-20250627', name: 'Claude Opus 4.6 (most capable)' },
+    { id: 'claude-sonnet-4-20250514', name: 'Claude Sonnet 4', default: true },
+    { id: 'claude-opus-4-20250514', name: 'Claude Opus 4 (most capable)' },
     { id: 'claude-haiku-4-5-20251001', name: 'Claude Haiku 4.5 (faster, cheaper)' },
   ],
   openai: [
@@ -1212,9 +1212,51 @@ app.post('/api/jobs/manual', async (req, res) => {
     const { listings } = req.body;
     if (!listings) return res.status(400).json({ error: 'Listings required' });
 
+    // Convert free-text pasted listings into structured format for parseRawJobListings
+    const blocks = listings.split(/^---$/m).filter(b => b.trim());
+    const structured = [];
+
+    for (const block of blocks) {
+      const lines = block.trim().split('\n').map(l => l.trim()).filter(Boolean);
+      if (!lines.length) continue;
+
+      // First line: "Role at Company, Location" or "Role - Specialty at Company, Location"
+      const firstLine = lines[0];
+      let title = '', company = '', location = '';
+      const atMatch = firstLine.match(/^(.+?)\s+at\s+(.+?)(?:,\s*(.+))?$/i);
+      if (atMatch) {
+        title = atMatch[1].trim();
+        company = atMatch[2].trim();
+        location = atMatch[3]?.trim() || '';
+      } else {
+        // Fallback: entire first line as title
+        title = firstLine;
+        company = 'Unknown';
+      }
+
+      // Find URL in remaining lines
+      let link = '';
+      const descLines = [];
+      for (let i = 1; i < lines.length; i++) {
+        if (lines[i].match(/^https?:\/\//)) {
+          link = lines[i];
+        } else {
+          descLines.push(lines[i]);
+        }
+      }
+
+      let entry = `Title: ${title}\nCompany: ${company}`;
+      if (location) entry += `\nLocation: ${location}`;
+      if (link) entry += `\nLink: ${link}`;
+      entry += `\nSource: Manual`;
+      if (descLines.length) entry += `\nSummary: ${descLines.join(' ')}`;
+      structured.push(entry);
+    }
+
+    const content = structured.join('\n---\n');
     const filename = `${datePrefix()}-manual.md`;
-    await writeFile(join(DATA, 'jobs', filename), listings);
-    res.json({ ok: true, filename });
+    await writeFile(join(DATA, 'jobs', filename), content);
+    res.json({ ok: true, filename, count: structured.length });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

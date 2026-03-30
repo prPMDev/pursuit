@@ -21,19 +21,14 @@ export function initJobDetail() {
 
   // Evaluate button — bound dynamically in renderEvaluator() to avoid double-fire
 
-  // Decision buttons
-  document.getElementById('btn-pursue').addEventListener('click', () => {
-    logDecision('PURSUING');
-    showPipeline('pursuing');
+  // Decision buttons — aligned with table flow (Consider / Pass)
+  document.getElementById('btn-consider').addEventListener('click', async () => {
+    await logDecision('CONSIDER');
+    refreshJobList();
   });
   document.getElementById('btn-pass').addEventListener('click', async () => {
     await logDecision('PASS');
-    // Don't show pipeline for passed jobs — just refresh list after decision is persisted
     refreshJobList();
-  });
-  document.getElementById('btn-save-later').addEventListener('click', () => {
-    logDecision('SAVED');
-    showPipeline('saved');
   });
 
   // Pipeline status buttons
@@ -173,10 +168,12 @@ export function showJobDetail(job) {
   const isUnscanned = !job.action || job.action === 'Unscanned' || job.action === 'UNSCANNED' || job.action === 'NEW';
 
   if (isUnscanned) {
-    // Collapse scanner rationale — just show a compact hint
+    // Collapse scanner rationale — show contextual hint based on API key state
     scannerSection.classList.remove('hidden');
     tagsContainer.innerHTML = '';
-    narrativeEl.textContent = 'Not yet evaluated. Add an API key in Settings to enable AI evaluation.';
+    narrativeEl.textContent = health.apiKeyConfigured
+      ? 'Not yet evaluated. Click Evaluate to run AI analysis.'
+      : 'Not yet evaluated. Add an API key in Settings to enable AI evaluation.';
     narrativeEl.classList.remove('hidden');
     scannerSection.querySelector('h4').textContent = 'Status';
   } else {
@@ -356,14 +353,14 @@ async function logDecision(decision) {
     });
 
     // Visual feedback
-    const btn = decision === 'PURSUING' ? document.getElementById('btn-pursue')
-      : decision === 'PASS' ? document.getElementById('btn-pass')
-      : document.getElementById('btn-save-later');
+    const btn = decision === 'CONSIDER' ? document.getElementById('btn-consider')
+      : document.getElementById('btn-pass');
 
-    btn.textContent = '✓ Logged';
-    setTimeout(() => {
-      btn.textContent = decision === 'PURSUING' ? 'Pursue' : decision === 'PASS' ? 'Pass' : 'Save for Later';
-    }, 1500);
+    if (btn) {
+      const originalText = btn.textContent;
+      btn.textContent = '✓ Logged';
+      setTimeout(() => { btn.textContent = originalText; }, 1500);
+    }
   } catch (err) {
     alert(`Failed to log decision: ${err.message}`);
   }

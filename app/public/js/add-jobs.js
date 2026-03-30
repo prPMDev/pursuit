@@ -54,12 +54,12 @@ export function initAddJobs() {
     if (!health.apiKeyConfigured) {
       // No API key — save listings without scanning
       try {
-        await api('/jobs/manual', {
+        const result = await api('/jobs/manual', {
           method: 'POST',
           body: { listings },
         });
         document.getElementById('input-listings').value = '';
-        alert('Jobs saved. Configure an API key in Settings to scan and evaluate them.');
+        await refreshJobList();
       } catch (err) {
         alert(`Save failed: ${err.message}`);
       }

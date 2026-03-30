@@ -333,7 +333,6 @@ export function initSettings() {
     );
     try {
       const result = await api(endpoint, { method: 'POST' });
-      hideLoading();
 
       if (result.totalFetched === 0) {
         updateFetchStatus('No new jobs found');
@@ -349,7 +348,6 @@ export function initSettings() {
 
       updateFetchCounter(result.remaining);
     } catch (err) {
-      hideLoading();
       if (err.message.includes('No search queries')) {
         alert('No search queries configured. Open Settings to add them.');
       } else if (err.message.includes('nudge') || err.message.includes('scanned 3') || err.message.includes('Three') || err.message.includes('Nope') || err.message.includes('slot machine') || err.message.includes('refresh')) {
@@ -358,6 +356,8 @@ export function initSettings() {
       } else {
         alert(`Fetch failed: ${err.message}`);
       }
+    } finally {
+      hideLoading();
     }
   });
 
