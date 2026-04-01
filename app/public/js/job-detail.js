@@ -31,43 +31,7 @@ export function initJobDetail() {
     refreshJobList();
   });
 
-  // Pipeline status buttons
-  document.getElementById('btn-mark-applied')?.addEventListener('click', () => updatePipelineStatus('applied'));
-  document.getElementById('btn-mark-interview')?.addEventListener('click', () => updatePipelineStatus('interview'));
-  document.getElementById('btn-mark-offered')?.addEventListener('click', () => updatePipelineStatus('offered'));
-  document.getElementById('btn-mark-rejected')?.addEventListener('click', () => updatePipelineStatus('rejected'));
-}
-
-function showPipeline(status) {
-  document.getElementById('action-initial').classList.add('hidden');
-  document.getElementById('action-pipeline').classList.remove('hidden');
-  updatePipelineDisplay(status);
-  injectIcons(document.getElementById('action-pipeline'));
-}
-
-function updatePipelineDisplay(status) {
-  const container = document.getElementById('pipeline-status');
-  container.innerHTML = statusBadge(status);
-  if (currentJob) currentJob.pipelineStatus = status;
-}
-
-async function updatePipelineStatus(status) {
-  if (!currentJob) return;
-  updatePipelineDisplay(status);
-
-  try {
-    await api('/decisions', {
-      method: 'POST',
-      body: {
-        company: currentJob.company,
-        role: currentJob.role,
-        scannerAction: currentJob.action,
-        decision: status.toUpperCase(),
-      },
-    });
-  } catch (err) {
-    console.error('Failed to update status:', err);
-  }
+  // Pipeline status buttons removed — Pursue flow deferred until #77 state machine lands
 }
 
 function openDetailPanel() {
@@ -91,9 +55,30 @@ export function showJobDetail(job) {
   openDetailPanel();
   document.getElementById('detail-content').classList.remove('hidden');
 
-  // Reset decision/pipeline state
-  document.getElementById('action-initial').classList.remove('hidden');
-  document.getElementById('action-pipeline').classList.add('hidden');
+  // Set decision/pipeline state based on job status
+  const actionInitial = document.getElementById('action-initial');
+  const actionPipeline = document.getElementById('action-pipeline');
+  const isPassed = job.decision === 'PASS' || job.action === 'PASS' || job.action === 'SKIP';
+
+  if (isPassed) {
+    actionInitial.classList.add('hidden');
+    actionPipeline.classList.remove('hidden');
+    actionPipeline.innerHTML = `<span class="status-badge pass">Passed</span>
+      <button class="btn btn-sm btn-ghost" id="btn-reconsider" style="margin-left: 8px;">Reconsider</button>`;
+    document.getElementById('btn-reconsider')?.addEventListener('click', async () => {
+      await api('/decisions', {
+        method: 'POST',
+        body: { company: job.company, role: job.role, scannerAction: job.action, decision: 'NEW' },
+      });
+      job.decision = '';
+      job.action = job.hasEvaluation ? 'EVALUATED' : 'NEW';
+      refreshJobList();
+      showJobDetail(job);
+    });
+  } else {
+    actionInitial.classList.remove('hidden');
+    actionPipeline.classList.add('hidden');
+  }
 
   // Inject icons in action buttons
   injectIcons(document.getElementById('detail-actions-section'));

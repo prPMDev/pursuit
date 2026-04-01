@@ -84,7 +84,7 @@ function actionsFormatter(cell) {
 
 async function inlineEvaluate(jobId) {
   const job = allJobs.find(j => j.id === jobId);
-  if (!job || !health.apiKeyConfigured) return;
+  if (!job || !health.apiKeyConfigured || job._evaluating) return;
 
   // Set loading state
   job._evaluating = true;
@@ -298,13 +298,14 @@ function applyFilter() {
   if (!table) return;
 
   if (currentFilter === 'all') {
-    // Inbox: hide passed jobs by default
+    // Inbox: show only scanner-processed jobs (not raw unscanned dumps)
     table.setFilter((data) => {
       const action = normalizeAction(data.action);
-      return action !== 'PASS' && data.decision !== 'PASS';
+      const isProcessed = action !== 'NEW' || data.decision || data.hasEvaluation;
+      return isProcessed && action !== 'PASS' && data.decision !== 'PASS';
     });
   } else if (currentFilter === 'NEW') {
-    table.setFilter((data) => normalizeAction(data.action) === 'NEW' && data.decision !== 'PASS');
+    table.setFilter((data) => normalizeAction(data.action) === 'NEW' && !data.decision && data.decision !== 'PASS');
   } else if (currentFilter === 'CONSIDER') {
     table.setFilter((data) => {
       const action = normalizeAction(data.action);
