@@ -339,7 +339,35 @@ export async function refreshJobList() {
       table.replaceData(allJobs);
       applyFilter();
     }
+
+    // Show unprocessed jobs count below table
+    updateUnprocessedBanner();
   } catch (err) {
     console.error('Failed to load jobs:', err);
   }
+}
+
+function updateUnprocessedBanner() {
+  const unprocessed = allJobs.filter(j => {
+    const action = normalizeAction(j.action);
+    return action === 'NEW' && !j.decision && !j.hasEvaluation;
+  });
+
+  let banner = document.getElementById('unprocessed-banner');
+  if (unprocessed.length === 0) {
+    if (banner) banner.remove();
+    return;
+  }
+
+  if (!banner) {
+    banner = document.createElement('div');
+    banner.id = 'unprocessed-banner';
+    banner.className = 'unprocessed-banner';
+    document.getElementById('job-list-table').after(banner);
+  }
+
+  banner.innerHTML = `<span>${unprocessed.length} additional jobs not yet scanned</span>`;
+  // New tab count
+  const newTab = document.querySelector('[data-filter="NEW"]');
+  if (newTab) newTab.textContent = `New (${unprocessed.length})`;
 }
