@@ -49,19 +49,21 @@ IMPORTANT: Use exactly **Watch-outs:** as the field name (not "Watch for" or oth
 
 Do not include the ``` markers in your actual output. Just output the structured assessment directly.
 
-## Example
+## Examples
 
-Below is a complete worked example using a sample profile (Alex Rivera, Senior PM with integrations/API background) evaluating a job flagged by the Scanner.
+Three calibrated examples showing PURSUE, MAYBE, and PASS decisions. Use these to calibrate your judgment — especially the boundary between MAYBE and PASS.
 
-**Scanner dossier excerpt (input):**
-- Company: Acme Health, Series B, 180 people
-- Role: Senior Product Manager, Integrations
-- Scanner match: Direct | Risk: Safe | Action: CONSIDER
-- Scanner narrative: "This is your integrations story applied to healthcare. Core function — own integrations roadmap, build partner ecosystem, work across eng and BD — is exactly what you do."
-- Watch-for: "15 to 50+ integrations" is ambitious — check if they have the eng team to support this or if it's a wishlist
+Profile for all examples: Alex Rivera, Senior PM with B2B SaaS platform/integrations background, targeting Senior-Staff level, prefers growth-stage (50-500 people), risk tolerance: 1 stretch factor max.
 
-**Evaluator output:**
-
+<example>
+<input>
+Company: Acme Health, Series B, 180 people
+Role: Senior Product Manager, Integrations
+Scanner: Direct match | Safe | CONSIDER
+Scanner narrative: "This is your integrations story applied to healthcare. Core function — own integrations roadmap, build partner ecosystem, work across eng and BD — is exactly what you do."
+Watch-for: "15 to 50+ integrations" is ambitious — check if they have the eng team to support this or if it's a wishlist
+</input>
+<output>
 **Decision: PURSUE**
 **Confidence:** High
 
@@ -92,3 +94,81 @@ Below is a complete worked example using a sample profile (Alex Rivera, Senior P
 - Experience defining API standards and developer documentation that reduced partner onboarding time
 - Track record of cross-functional leadership across engineering, BD, and external partners in a high-growth environment
 **Next steps:** Apply directly and look for warm connections at Acme Health on LinkedIn. Prepare a brief on healthcare integration standards (HL7/FHIR) to demonstrate domain curiosity in interviews.
+</output>
+</example>
+
+<example>
+<input>
+Company: NovaTech AI, Series A, 45 people
+Role: Product Lead, AI Platform
+Scanner: Adjacent match | Stretch | CONSIDER
+Scanner narrative: "Platform PM experience transfers well. AI domain is new but the structural work — APIs, developer tools, ecosystem — is the same. Title is 'Lead' which may be Staff-equivalent at this stage."
+Watch-for: 45-person company may be too early-stage. "Product Lead" title could mean anything from IC to managing 3 PMs. Check if this is strategy or execution.
+</input>
+<output>
+**Decision: MAYBE**
+**Confidence:** Medium
+
+**Fit summary:** Interesting adjacent match with real upside, but two concerns — company stage and role ambiguity — need answers before committing.
+
+**Match:** Adjacent — Platform/API/developer tools experience transfers directly, AI domain is learnable
+**Level:** Unclear — "Product Lead" at a 45-person startup could be Senior IC or early management. Need to clarify.
+**Risk:** Stretch — Disagree slightly with Scanner's risk assessment. Two stretch factors: new domain (AI) AND company stage below stated preference (45 < 50 minimum). That's at the boundary of stated risk tolerance.
+
+**Key strengths:**
+- Structural skill transfer is strong: APIs, platform, developer ecosystem
+- AI platform work is high-signal for career trajectory
+- "Product Lead" title could represent a level-up opportunity
+
+**Key concerns:**
+- Company size (45) is below stated minimum of 50 — early-stage risk
+- "Product Lead" is ambiguous — could be execution-heavy if they don't have eng leadership yet
+
+**Watch-outs:**
+- 45-person company stage: Below profile preference. At this size, PM often becomes project manager. Ask how many engineers report to eng leads vs directly to PM.
+- "Product Lead" title ambiguity: Ask explicitly — is this IC with strategy ownership, or are you managing other PMs? If managing, how many?
+
+**Red flags:** None definitive, but the stage + title ambiguity together warrant caution.
+
+**Why:** The structural match is genuinely strong — platform, APIs, developer tools are the same work in a different domain. The concern isn't fit, it's context. At 45 people, the PM role often becomes "do everything" rather than strategic platform work. And "Product Lead" without clarity on scope could mean anything. Either of these alone would be fine. Together, they push this to MAYBE. Worth a conversation to resolve both questions — if the answers are right, this becomes a PURSUE.
+
+**Next steps:** Research NovaTech's funding, team composition, and product maturity. If you can find an eng leader on LinkedIn, that signals the PM role is strategy not execution. Don't apply blind — resolve the two questions first.
+</output>
+</example>
+
+<example>
+<input>
+Company: MegaBank Corp, 50,000 employees
+Role: VP Product, Digital Banking Transformation
+Scanner: No match | Stretch | CONSIDER
+Scanner narrative: "Title is exciting but this is 2 levels above target in a domain (banking) that doesn't match. Massive company. Including because compensation would be exceptional."
+Watch-for: VP at a 50K-person bank is a political role. Check if this is product leadership or stakeholder management with a product title.
+</input>
+<output>
+**Decision: PASS**
+**Confidence:** High
+
+**Fit summary:** Two levels above target, wrong domain, wrong company stage. Compensation alone doesn't justify 3 stretch factors.
+
+**Match:** No match — Digital banking transformation is neither platform nor integrations work. This is domain-specific enterprise consulting disguised as product.
+**Level:** Too senior — VP at a 50K-person company is 2+ levels above stated Senior PM target. The leveling context is clear: this is executive leadership, not product management.
+**Risk:** Overriding Scanner — This is not a stretch, it's a mismatch. Scanner included it for compensation. Compensation is not a match criterion.
+
+**Key strengths:**
+- None that align with stated profile goals
+
+**Key concerns:**
+- 2+ level jump violates rubric (pass threshold)
+- Banking domain has zero structural overlap with B2B SaaS platform work
+- 50K employees is 100x stated company size preference
+
+**Watch-outs:**
+- VP at a 50K-person bank: Scanner was right to flag this. "Digital Banking Transformation" at this scale is change management and stakeholder politics, not product strategy. The PM title is cosmetic.
+
+**Red flags:** Vague scope ("transformation" without specific product), massive company bureaucracy, title inflation.
+
+**Why:** Three stretch factors: level (VP = 2+ above), domain (banking ≠ SaaS platform), and company stage (50K ≠ growth-stage). The profile explicitly states 1 stretch factor max. Even if each factor were borderline, three together make this a clear pass. The Scanner included it for compensation — that's not how this works. The goal is career fit, not salary maximization. Passing.
+
+**Next steps:** None. Move on.
+</output>
+</example>
