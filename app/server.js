@@ -262,22 +262,42 @@ function parseRawJobListings(markdown) {
 
 function parseScannerOutput(markdown) {
   const jobs = [];
-  const tableRegex = /\|\s*(\d+)\s*\|\s*(.+?)\s*\|\s*(.+?)\s*\|\s*(.+?)\s*\|\s*(.+?)\s*\|\s*(.+?)\s*\|\s*(.+?)\s*\|/g;
+  // Support both 7-column (legacy) and 8-column (with Score) format
+  const tableRegex8 = /\|\s*(\d+)\s*\|\s*(.+?)\s*\|\s*(.+?)\s*\|\s*(.+?)\s*\|\s*(.+?)\s*\|\s*(.+?)\s*\|\s*(.+?)\s*\|\s*(.+?)\s*\|/g;
+  const tableRegex7 = /\|\s*(\d+)\s*\|\s*(.+?)\s*\|\s*(.+?)\s*\|\s*(.+?)\s*\|\s*(.+?)\s*\|\s*(.+?)\s*\|\s*(.+?)\s*\|/g;
   let match;
 
-  while ((match = tableRegex.exec(markdown)) !== null) {
-    // Skip header row
+  // Try 8-column format first (with Score)
+  while ((match = tableRegex8.exec(markdown)) !== null) {
     if (match[1] === '#' || match[2].includes('---')) continue;
-
+    const scoreStr = match[4].trim().replace('%', '');
     jobs.push({
       index: parseInt(match[1]),
       company: match[2].trim(),
       role: match[3].trim(),
-      matchType: match[4].trim(),
-      risk: match[5].trim(),
-      action: match[6].trim(),
-      keySignal: match[7].trim(),
+      fitScore: parseInt(scoreStr) || null,
+      matchType: match[5].trim(),
+      risk: match[6].trim(),
+      action: match[7].trim(),
+      keySignal: match[8].trim(),
     });
+  }
+
+  // Fallback to 7-column format (legacy, no Score)
+  if (jobs.length === 0) {
+    while ((match = tableRegex7.exec(markdown)) !== null) {
+      if (match[1] === '#' || match[2].includes('---')) continue;
+      jobs.push({
+        index: parseInt(match[1]),
+        company: match[2].trim(),
+        role: match[3].trim(),
+        fitScore: null,
+        matchType: match[4].trim(),
+        risk: match[5].trim(),
+        action: match[6].trim(),
+        keySignal: match[7].trim(),
+      });
+    }
   }
 
   // Parse CONSIDER details (backward compat: also match EVALUATE)

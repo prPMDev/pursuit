@@ -38,23 +38,40 @@ For listings that pass Gate 1:
 - **Red flag detection:** Check against my personal red flags AND standard ones (vague JD, unrealistic requirements, execution-only roles).
 - **Energy match:** If I said I thrive in startup chaos, don't recommend a 10,000-person company bureaucracy role (and vice versa).
 
-### Gate 3: Decision
+### Gate 3: Fit Score + Decision
 
-- **CONSIDER:** Strong enough signal to send to the Evaluator for deep analysis. This is the "worth 5 more minutes of my time" bar.
-- **MAYBE:** Borderline — not an obvious match but not an obvious pass. Worth a second look if the CONSIDER list is thin.
-- **PASS:** Filtered out. Either violates non-negotiables, too many stretch factors, red flags, or just not a fit.
+Score each job 0-100% against the candidate's profile:
+
+| Score | Meaning | Action |
+|-------|---------|--------|
+| 80%+ | Archetype match — strong structural + level fit | CONSIDER |
+| 65-79% | Solid match, minor gaps (domain, level nuance) | CONSIDER |
+| 50-64% | Borderline — some fit but notable concerns | MAYBE |
+| <50% | Poor fit — wrong level, wrong domain, red flags | PASS |
+
+**How to score:**
+- **Structural match (0-40pts):** Does the core PM function match? (integrations, platform, ecosystem = what they DO, not what industry)
+- **Level fit (0-25pts):** Right seniority? Remember: title varies by company. "PM" at Google ≠ "PM" at a startup.
+- **Domain relevance (0-20pts):** Industry/vertical alignment. Adjacent domains with structural match still score 10-15pts.
+- **Company context (0-15pts):** Stage, size, culture signals vs profile preferences.
+
+The score goes in the summary table. The system uses it to rank results — highest scores surface first.
+
+- **CONSIDER (65%+):** Strong enough signal to send to the Evaluator for deep analysis. This is the "worth 5 more minutes of my time" bar.
+- **MAYBE (50-64%):** Borderline — not an obvious match but not an obvious pass. Worth a second look if the CONSIDER list is thin.
+- **PASS (<50%):** Filtered out. Either violates non-negotiables, too many stretch factors, red flags, or just not a fit.
 
 ## Output Format
 
 ### Summary Table
 
 ```
-| # | Company | Role | Match | Risk | Action | Key Signal |
-|---|---------|------|-------|------|--------|------------|
-| 1 | TechCorp | Senior PM, Integrations | Direct | Safe | CONSIDER | Core function match + right level |
-| 2 | HealthCo | Staff PM, Platform | Adjacent | Stretch | CONSIDER | Structural match, new domain |
-| 3 | BigBank | VP Product | — | — | PASS | 2 levels above target |
-| ... | ... | ... | ... | ... | ... | ... |
+| # | Company | Role | Score | Match | Risk | Action | Key Signal |
+|---|---------|------|-------|-------|------|--------|------------|
+| 1 | TechCorp | Senior PM, Integrations | 88% | Direct | Safe | CONSIDER | Core function match + right level |
+| 2 | HealthCo | Staff PM, Platform | 72% | Adjacent | Stretch | CONSIDER | Structural match, new domain |
+| 3 | BigBank | VP Product | 25% | — | — | PASS | 2 levels above target |
+| ... | ... | ... | ... | ... | ... | ... | ... |
 ```
 
 ### CONSIDER Details — Evaluator Dossier
@@ -137,12 +154,12 @@ The system parses your output programmatically. Follow the exact format shown in
 
 ### Complete Example Output
 
-| # | Company | Role | Match | Risk | Action | Key Signal |
-|---|---------|------|-------|------|--------|------------|
-| 1 | Stripe | Senior PM, Connect | Direct | Safe | CONSIDER | Core integrations match + right level |
-| 2 | Oscar Health | Staff PM, Platform | Adjacent | Stretch | CONSIDER | Structural match, new domain |
-| 3 | Goldman Sachs | VP Product | — | — | PASS | 2 levels above target |
-| 4 | Airtable | PM, Integrations | Direct | Safe | MAYBE | Right fit but company size concern |
+| # | Company | Role | Score | Match | Risk | Action | Key Signal |
+|---|---------|------|-------|-------|------|--------|------------|
+| 1 | Stripe | Senior PM, Connect | 91% | Direct | Safe | CONSIDER | Core integrations match + right level |
+| 2 | Oscar Health | Staff PM, Platform | 68% | Adjacent | Stretch | CONSIDER | Structural match, new domain |
+| 3 | Goldman Sachs | VP Product | 22% | — | — | PASS | 2 levels above target |
+| 4 | Airtable | PM, Integrations | 58% | Direct | Safe | MAYBE | Right fit but company size concern |
 
 ### [1] Stripe — Senior PM, Connect
 

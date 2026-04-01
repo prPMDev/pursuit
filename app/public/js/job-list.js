@@ -25,10 +25,12 @@ function badgeFormatter(cell) {
 
 function signalFormatter(cell) {
   const data = cell.getRow().getData();
+  const score = data.fitScore;
   const text = data.keySignal || data.narrative || '';
-  if (!text) return '<span class="cell-muted">\u2014</span>';
-  const truncated = text.length > 80 ? text.substring(0, 77) + '...' : text;
-  return `<span class="cell-signal-text">${truncated}</span>`;
+  const scoreBadge = score ? `<span class="fit-score fit-score-${score >= 80 ? 'high' : score >= 65 ? 'mid' : 'low'}">${score}%</span> ` : '';
+  if (!text && !score) return '<span class="cell-muted">\u2014</span>';
+  const truncated = text.length > 60 ? text.substring(0, 57) + '...' : text;
+  return `${scoreBadge}<span class="cell-signal-text">${truncated}</span>`;
 }
 
 function dateFormatter(cell) {
@@ -205,12 +207,16 @@ export function initJobList() {
         cssClass: 'cell-role',
       },
       {
-        title: 'Signal',
+        title: 'Fit',
         field: 'keySignal',
         minWidth: 140,
         widthGrow: 1,
         formatter: signalFormatter,
-        headerSort: false,
+        sorter: (a, b, aRow, bRow) => {
+          const aScore = aRow.getData().fitScore || 0;
+          const bScore = bRow.getData().fitScore || 0;
+          return aScore - bScore;
+        },
         cssClass: 'cell-signal',
       },
       {
@@ -238,7 +244,7 @@ export function initJobList() {
         cssClass: 'cell-actions',
       },
     ],
-    initialSort: [{ column: 'date', dir: 'desc' }],
+    initialSort: [{ column: 'keySignal', dir: 'desc' }],
     rowHeight: 56,
     rowFormatter: (row) => {
       const data = row.getData();
