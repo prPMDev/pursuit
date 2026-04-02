@@ -498,7 +498,7 @@ app.get('/api/jobs', async (req, res) => {
             const decMatch = evalContent.match(/\*\*Decision:\s*(PURSUE|MAYBE|PASS)/i);
             if (decMatch) job.evalDecision = decMatch[1].toUpperCase();
             const sumMatch = evalContent.match(/\*\*Fit summary:\*\*\s*(.+?)(?:\n|$)/);
-            if (sumMatch) job.evalSummary = sumMatch[1].trim();
+            if (sumMatch) job.evalSummary = sumMatch[1].trim().replace(/\s*[—–]\s*/g, ': ');
           } catch { /* eval file read failed, keep scanner score */ }
         }
 

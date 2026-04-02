@@ -248,8 +248,8 @@ async function renderEvaluator() {
   }
 
   if (currentJob.hasEvaluation && currentJob.evaluation) {
-    // Parse evaluation result — support both old and new field names
-    const eval_ = currentJob.evaluation;
+    // Parse evaluation result, clean em dashes from old outputs
+    const eval_ = currentJob.evaluation.replace(/\s*—\s*/g, ': ').replace(/\s*–\s*/g, ': ');
     const matchType = extractField(eval_, 'Match Type') || extractField(eval_, 'Match');
     const levelFit = extractField(eval_, 'Level Fit') || extractField(eval_, 'Level');
     const risk = extractField(eval_, 'Risk');

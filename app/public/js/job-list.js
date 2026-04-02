@@ -127,7 +127,7 @@ async function inlineEvaluate(jobId) {
     const decMatch = result.result.match(/\*\*Decision:\s*(PURSUE|MAYBE|PASS)/i);
     if (decMatch) job.evalDecision = decMatch[1].toUpperCase();
     const sumMatch = result.result.match(/\*\*Fit summary:\*\*\s*(.+?)(?:\n|$)/);
-    if (sumMatch) job.evalSummary = sumMatch[1].trim();
+    if (sumMatch) job.evalSummary = sumMatch[1].trim().replace(/\s*—\s*/g, ': ');
 
     const row2 = table.getRows().find(r => r.getData().id === jobId);
     if (row2) row2.reformat();
