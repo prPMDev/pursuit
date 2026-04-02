@@ -136,7 +136,8 @@ export function renderSetupOverlay() {
       <div class="setup-panel" id="setup-panel-profile">
         <div class="setup-form-group">
           <label for="setup-identity">Who are you in one sentence? <span class="required">*</span></label>
-          <textarea id="setup-identity" rows="1" placeholder='e.g., "I build integrations and partner ecosystems at B2B SaaS companies as a product manager."'></textarea>
+          <textarea id="setup-identity" rows="1" placeholder='e.g., "I build integrations and partner ecosystems at B2B SaaS companies."'></textarea>
+          <div class="setup-hint" id="identity-inspiration" style="font-style: italic; margin-top: 4px;"></div>
         </div>
 
         <div class="setup-form-group">
@@ -834,7 +835,37 @@ function resetSetup() {
 
 // --- Init ---
 
+const IDENTITY_EXAMPLES = [
+  '"I build integrations and partner ecosystems at B2B SaaS companies."',
+  '"I turn messy data pipelines into reliable platforms that engineering teams love."',
+  '"I ship developer tools that make complex APIs feel simple."',
+  '"I grow marketplace products by connecting supply and demand at scale."',
+  '"I lead cross-functional teams to launch enterprise features from 0 to 1."',
+  '"I design systems that handle millions of transactions without anyone noticing."',
+  '"I make healthcare software that doctors actually want to use."',
+  '"I build the infrastructure that other teams build products on."',
+  '"I find product-market fit in ambiguous spaces where the roadmap is blank."',
+  '"I connect business strategy to technical execution as the PM in the room."',
+];
+
+function startIdentityRotation() {
+  const el = document.getElementById('identity-inspiration');
+  if (!el) return;
+  let idx = Math.floor(Math.random() * IDENTITY_EXAMPLES.length);
+  el.textContent = `Try something like: ${IDENTITY_EXAMPLES[idx]}`;
+  setInterval(() => {
+    idx = (idx + 1) % IDENTITY_EXAMPLES.length;
+    el.style.opacity = '0';
+    setTimeout(() => {
+      el.textContent = `Try something like: ${IDENTITY_EXAMPLES[idx]}`;
+      el.style.opacity = '1';
+    }, 300);
+  }, 5000);
+}
+
 export function initSetup() {
+  startIdentityRotation();
+
   // Tab navigation
   document.querySelectorAll('.setup-tab').forEach(tab => {
     tab.addEventListener('click', () => switchTab(tab.dataset.tab));

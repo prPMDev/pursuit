@@ -1106,6 +1106,9 @@ textarea:focus { outline: 2px solid var(--text); outline-offset: -1px; }
 .btn-suggestion:hover { border-color: var(--text-muted); background: var(--bg-hover); }
 .btn-suggestion.selected { background: var(--blue-bg); border-color: var(--blue-border); color: var(--blue); }
 
+/* Identity inspiration rotation */
+#identity-inspiration { transition: opacity 0.3s ease; color: var(--text-muted); font-size: 12px; }
+
 .tag-input-tags {
   display: flex;
   flex-wrap: wrap;
