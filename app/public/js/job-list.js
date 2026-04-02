@@ -24,19 +24,7 @@ function badgeFormatter(cell) {
   return `<span class="status-badge ${cls}">${val}</span>`;
 }
 
-function signalFormatter(cell) {
-  const data = cell.getRow().getData();
-  const score = data.fitScore;
-  const evalDecision = data.evalDecision;
-  // After evaluation, show evaluator's fit summary instead of scanner's signal
-  let text = data.keySignal || data.narrative || '';
-  if (data.evalSummary) text = data.evalSummary;
-  const scoreBadge = score ? `<span class="fit-score fit-score-${score >= 80 ? 'high' : score >= 65 ? 'mid' : 'low'}">${score}%</span> ` : '';
-  const evalBadge = evalDecision ? `<span class="eval-rec eval-rec-${evalDecision.toLowerCase()}">${evalDecision}</span> ` : '';
-  if (!text && !score) return '<span class="cell-muted">\u2014</span>';
-  const truncated = text.length > 50 ? text.substring(0, 47) + '...' : text;
-  return `${scoreBadge}${evalBadge}<span class="cell-signal-text">${truncated}</span>`;
-}
+// signalFormatter removed — Fit, AI, and Rationale are now separate columns
 
 function dateFormatter(cell) {
   const val = cell.getValue();
@@ -215,25 +203,43 @@ export function initJobList() {
       },
       {
         title: 'Fit',
-        field: 'keySignal',
-        minWidth: 140,
-        widthGrow: 1,
-        formatter: signalFormatter,
-        sorter: (a, b, aRow, bRow) => {
-          const aScore = aRow.getData().fitScore || 0;
-          const bScore = bRow.getData().fitScore || 0;
-          return aScore - bScore;
+        field: 'fitScore',
+        width: 55,
+        hozAlign: 'center',
+        formatter: (cell) => {
+          const score = cell.getValue();
+          if (!score) return '<span class="cell-muted">—</span>';
+          const cls = score >= 80 ? 'high' : score >= 65 ? 'mid' : 'low';
+          return `<span class="fit-score fit-score-${cls}">${score}%</span>`;
         },
-        cssClass: 'cell-signal',
+        sorter: 'number',
       },
       {
-        title: 'When',
-        field: 'date',
-        width: 75,
-        formatter: dateFormatter,
-        sorter: 'date',
-        hozAlign: 'right',
-        cssClass: 'cell-muted',
+        title: 'AI',
+        field: 'evalDecision',
+        width: 65,
+        hozAlign: 'center',
+        formatter: (cell) => {
+          const dec = cell.getValue();
+          if (!dec) return '';
+          return `<span class="eval-rec eval-rec-${dec.toLowerCase()}">${dec}</span>`;
+        },
+        headerSort: false,
+      },
+      {
+        title: 'Rationale',
+        field: 'keySignal',
+        minWidth: 120,
+        widthGrow: 1,
+        formatter: (cell) => {
+          const data = cell.getRow().getData();
+          const text = data.evalSummary || data.keySignal || data.narrative || '';
+          if (!text) return '<span class="cell-muted">—</span>';
+          const truncated = text.length > 60 ? text.substring(0, 57) + '...' : text;
+          return `<span class="cell-signal-text">${truncated}</span>`;
+        },
+        headerSort: false,
+        cssClass: 'cell-signal',
       },
       {
         title: 'Status',
@@ -250,8 +256,17 @@ export function initJobList() {
         formatter: actionsFormatter,
         cssClass: 'cell-actions',
       },
+      {
+        title: 'When',
+        field: 'date',
+        width: 70,
+        formatter: dateFormatter,
+        sorter: 'date',
+        hozAlign: 'right',
+        cssClass: 'cell-muted',
+      },
     ],
-    initialSort: [{ column: 'keySignal', dir: 'desc' }],
+    initialSort: [{ column: 'fitScore', dir: 'desc' }],
     rowHeight: 56,
     rowFormatter: (row) => {
       const data = row.getData();
