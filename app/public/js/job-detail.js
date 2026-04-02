@@ -145,13 +145,14 @@ export function showJobDetail(job) {
   // Listing details grid
   const listingGrid = document.getElementById('detail-listing');
   const listingSection = document.getElementById('detail-listing-section');
+  const isKnown = (v) => v && v !== 'Unknown' && v !== 'unknown' && v !== '—';
   const listingFields = [
-    job.salary ? ['Salary', job.salary] : null,
-    job.posted ? ['Posted', job.posted] : null,
-    job.experienceLevel ? ['Level', job.experienceLevel] : null,
-    job.companySize ? ['Company size', job.companySize] : null,
-    job.location ? ['Location', job.location] : null,
-    job.jobType ? ['Type', job.jobType] : null,
+    isKnown(job.salary) ? ['Salary', job.salary] : null,
+    isKnown(job.posted) ? ['Posted', job.posted] : null,
+    isKnown(job.experienceLevel) ? ['Level', job.experienceLevel] : null,
+    isKnown(job.companySize) ? ['Company size', job.companySize] : null,
+    isKnown(job.location) ? ['Location', job.location] : null,
+    isKnown(job.jobType) ? ['Type', job.jobType] : null,
   ].filter(Boolean);
 
   if (listingFields.length > 0) {
