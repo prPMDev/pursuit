@@ -474,6 +474,13 @@ app.get('/api/jobs', async (req, res) => {
           job.companySize = raw.companySize || '';
           if (raw.availability) job.availability = raw.availability;
           if (raw.extractionStatus) job.extractionStatus = raw.extractionStatus;
+          // Clean location: strip company name + "Remote" prefix from dirty Indeed data
+          if (job.location) {
+            job.location = job.location
+              .replace(/^.+?(?:Remote|Hybrid|On-?site)\s*(?:in\s+)?/i, '')
+              .replace(/^(?:in\s+)/i, '')
+              .trim() || job.location;
+          }
         }
 
         // Compute missing fields for UI
