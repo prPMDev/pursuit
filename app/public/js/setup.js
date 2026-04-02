@@ -871,8 +871,41 @@ export function initSetup() {
     tab.addEventListener('click', () => switchTab(tab.dataset.tab));
   });
 
-  // Next/Back buttons
-  document.getElementById('setup-to-search')?.addEventListener('click', () => switchTab('search'));
+  // Next/Back buttons — enforce mandatory fields before advancing
+  document.getElementById('setup-to-search')?.addEventListener('click', () => {
+    const identity = document.getElementById('setup-identity')?.value.trim();
+    const role = document.getElementById('setup-role')?.value.trim();
+    const level = document.getElementById('setup-level')?.value.trim();
+    const location = document.getElementById('setup-location')?.value.trim();
+    const missing = [];
+    if (!identity) missing.push('Who are you');
+    if (!role) missing.push('Role');
+    if (!level) missing.push('Current level');
+    if (!location) missing.push('Location');
+    if (missing.length > 0) {
+      // Highlight missing fields
+      if (!identity) document.getElementById('setup-identity').style.borderColor = 'var(--red)';
+      if (!role) document.getElementById('setup-role').style.borderColor = 'var(--red)';
+      if (!level) document.getElementById('setup-level').style.borderColor = 'var(--red)';
+      if (!location) document.getElementById('setup-location').style.borderColor = 'var(--red)';
+      // Show inline error
+      let errEl = document.getElementById('setup-profile-error');
+      if (!errEl) {
+        errEl = document.createElement('p');
+        errEl.id = 'setup-profile-error';
+        errEl.style.cssText = 'color: var(--red); font-size: 13px; margin-top: 8px;';
+        document.getElementById('setup-to-search').parentElement.appendChild(errEl);
+      }
+      errEl.textContent = `Fill in required fields: ${missing.join(', ')}`;
+      return;
+    }
+    // Clear any previous errors
+    document.getElementById('setup-profile-error')?.remove();
+    ['setup-identity', 'setup-role', 'setup-level', 'setup-location'].forEach(id => {
+      document.getElementById(id).style.borderColor = '';
+    });
+    switchTab('search');
+  });
   document.getElementById('setup-to-ai')?.addEventListener('click', () => switchTab('ai'));
   document.getElementById('setup-to-confirm')?.addEventListener('click', () => switchTab('confirm'));
   document.getElementById('setup-back-profile')?.addEventListener('click', () => switchTab('profile'));
