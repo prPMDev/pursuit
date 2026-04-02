@@ -28,7 +28,6 @@ const SAMPLE_PROFILES = [
       titles: ['Product Manager', 'Senior Product Manager', 'Staff Product Manager', 'Group Product Manager'],
       industries: ['SaaS', 'Fintech', 'Enterprise Software'],
       domains: ['Platform', 'Integrations', 'Developer Tools', 'Payments'],
-      titlesFlex: 2, industriesFlex: 2, domainsFlex: 3,
       levels: ['senior', 'lead'],
       companySize: ['growth', 'enterprise'],
     },
@@ -54,7 +53,6 @@ const SAMPLE_PROFILES = [
       titles: ['Software Engineer', 'Senior Software Engineer', 'Staff Engineer', 'Backend Engineer'],
       industries: ['Cloud Infrastructure', 'SaaS', 'AI/ML'],
       domains: ['Distributed Systems', 'Backend', 'Platform Engineering', 'Data Infrastructure'],
-      titlesFlex: 2, industriesFlex: 3, domainsFlex: 2,
       levels: ['senior', 'lead'],
       companySize: ['growth', 'enterprise'],
     },
@@ -80,7 +78,6 @@ const SAMPLE_PROFILES = [
       titles: ['Data Scientist', 'Senior Data Scientist', 'ML Engineer', 'Applied Scientist'],
       industries: ['Healthcare', 'Fintech', 'E-commerce', 'AI/ML'],
       domains: ['Machine Learning', 'NLP', 'Experimentation', 'Recommendation Systems'],
-      titlesFlex: 2, industriesFlex: 3, domainsFlex: 2,
       levels: ['senior', 'lead'],
       companySize: ['startup', 'growth'],
     },
@@ -106,7 +103,6 @@ const SAMPLE_PROFILES = [
       titles: ['UX Designer', 'Senior UX Designer', 'Lead Designer', 'Head of Design'],
       industries: ['Enterprise Software', 'SaaS', 'Healthcare'],
       domains: ['Design Systems', 'UX Research', 'Interaction Design', 'Accessibility'],
-      titlesFlex: 2, industriesFlex: 2, domainsFlex: 3,
       levels: ['lead', 'director'],
       companySize: ['growth', 'enterprise'],
     },
@@ -219,35 +215,55 @@ export function renderSetupOverlay() {
 
       <!-- Tab 2: Search Preferences -->
       <div class="setup-panel hidden" id="setup-panel-search">
-        <p class="setup-hint">Tell Pursuit what to look for. Tags help the scanner match jobs to you. Flexibility sliders control how strictly each dimension is filtered.</p>
+        <p class="setup-hint">Tell Pursuit what to look for. Pick from common options or type your own.</p>
 
         <div class="setup-form-group">
           <label>Job titles <span class="required">*</span></label>
           <div id="setup-titles-input"></div>
-          <div class="setup-slider-row">
-            <span class="setup-slider-label">Flexibility</span>
-            <sl-range id="setup-titles-flex" min="0" max="4" value="2" step="1" tooltip="none"></sl-range>
-            <span class="setup-slider-value" id="setup-titles-flex-label">Medium</span>
+          <div class="setup-suggestions" data-target="setup-titles-input">
+            <button type="button" class="btn-suggestion" data-value="Product Manager">Product Manager</button>
+            <button type="button" class="btn-suggestion" data-value="Senior Product Manager">Senior Product Manager</button>
+            <button type="button" class="btn-suggestion" data-value="Staff Product Manager">Staff Product Manager</button>
+            <button type="button" class="btn-suggestion" data-value="Principal Product Manager">Principal Product Manager</button>
+            <button type="button" class="btn-suggestion" data-value="Group Product Manager">Group Product Manager</button>
+            <button type="button" class="btn-suggestion" data-value="Director of Product">Director of Product</button>
+            <button type="button" class="btn-suggestion" data-value="Technical Product Manager">Technical Product Manager</button>
+            <button type="button" class="btn-suggestion" data-value="Product Lead">Product Lead</button>
           </div>
         </div>
 
         <div class="setup-form-group">
           <label>Industries</label>
           <div id="setup-industries-input"></div>
-          <div class="setup-slider-row">
-            <span class="setup-slider-label">Flexibility</span>
-            <sl-range id="setup-industries-flex" min="0" max="4" value="2" step="1" tooltip="none"></sl-range>
-            <span class="setup-slider-value" id="setup-industries-flex-label">Medium</span>
+          <div class="setup-suggestions" data-target="setup-industries-input">
+            <button type="button" class="btn-suggestion" data-value="SaaS">SaaS</button>
+            <button type="button" class="btn-suggestion" data-value="Fintech">Fintech</button>
+            <button type="button" class="btn-suggestion" data-value="Enterprise Software">Enterprise Software</button>
+            <button type="button" class="btn-suggestion" data-value="E-commerce">E-commerce</button>
+            <button type="button" class="btn-suggestion" data-value="Healthcare">Healthcare</button>
+            <button type="button" class="btn-suggestion" data-value="Developer Tools">Developer Tools</button>
+            <button type="button" class="btn-suggestion" data-value="Cybersecurity">Cybersecurity</button>
+            <button type="button" class="btn-suggestion" data-value="AI / ML">AI / ML</button>
+            <button type="button" class="btn-suggestion" data-value="Media / Entertainment">Media / Entertainment</button>
+            <button type="button" class="btn-suggestion" data-value="EdTech">EdTech</button>
           </div>
         </div>
 
         <div class="setup-form-group">
           <label>Domains / focus areas</label>
           <div id="setup-domains-input"></div>
-          <div class="setup-slider-row">
-            <span class="setup-slider-label">Flexibility</span>
-            <sl-range id="setup-domains-flex" min="0" max="4" value="2" step="1" tooltip="none"></sl-range>
-            <span class="setup-slider-value" id="setup-domains-flex-label">Medium</span>
+          <div class="setup-suggestions" data-target="setup-domains-input">
+            <button type="button" class="btn-suggestion" data-value="Platform">Platform</button>
+            <button type="button" class="btn-suggestion" data-value="Integrations">Integrations</button>
+            <button type="button" class="btn-suggestion" data-value="Payments">Payments</button>
+            <button type="button" class="btn-suggestion" data-value="Growth">Growth</button>
+            <button type="button" class="btn-suggestion" data-value="Data / Analytics">Data / Analytics</button>
+            <button type="button" class="btn-suggestion" data-value="Developer Experience">Developer Experience</button>
+            <button type="button" class="btn-suggestion" data-value="Marketplace">Marketplace</button>
+            <button type="button" class="btn-suggestion" data-value="Infrastructure">Infrastructure</button>
+            <button type="button" class="btn-suggestion" data-value="Search / Discovery">Search / Discovery</button>
+            <button type="button" class="btn-suggestion" data-value="Trust / Safety">Trust / Safety</button>
+            <button type="button" class="btn-suggestion" data-value="Core Product">Core Product</button>
           </div>
         </div>
 
@@ -368,17 +384,6 @@ export function hideSetup() {
   document.querySelector('main').classList.remove('hidden');
 }
 
-const FLEX_LABELS = ['Exact', 'Tight', 'Medium', 'Loose', 'Wide Open'];
-
-function updateFlexLabel(sliderId, labelId) {
-  const slider = document.getElementById(sliderId);
-  const label = document.getElementById(labelId);
-  if (!slider || !label) return;
-  const update = () => { label.textContent = FLEX_LABELS[slider.value] || 'Medium'; };
-  slider.addEventListener('sl-input', update);
-  update();
-}
-
 async function initTagInputs() {
   try {
     const resp = await fetch('/data/taxonomies.json');
@@ -400,9 +405,17 @@ async function initTagInputs() {
     placeholder: 'Type a domain...',
   });
 
-  updateFlexLabel('setup-titles-flex', 'setup-titles-flex-label');
-  updateFlexLabel('setup-industries-flex', 'setup-industries-flex-label');
-  updateFlexLabel('setup-domains-flex', 'setup-domains-flex-label');
+  // Wire suggestion pill buttons
+  document.querySelectorAll('.setup-suggestions .btn-suggestion').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const targetId = btn.closest('.setup-suggestions').dataset.target;
+      const key = targetId.replace('setup-', '').replace('-input', '');
+      if (tagInputs[key]) {
+        tagInputs[key].addTag(btn.dataset.value);
+        btn.classList.add('selected');
+      }
+    });
+  });
 }
 
 function fillSampleProfile(index) {
@@ -434,12 +447,6 @@ function fillSampleProfile(index) {
   if (tagInputs.titles) tagInputs.titles.setValue(s.titles);
   if (tagInputs.industries) tagInputs.industries.setValue(s.industries);
   if (tagInputs.domains) tagInputs.domains.setValue(s.domains);
-
-  // Flexibility sliders
-  const setSlider = (id, val) => { const el = document.getElementById(id); if (el) { el.value = val; el.dispatchEvent(new Event('sl-input')); } };
-  setSlider('setup-titles-flex', s.titlesFlex);
-  setSlider('setup-industries-flex', s.industriesFlex);
-  setSlider('setup-domains-flex', s.domainsFlex);
 
   // Level checkboxes
   document.querySelectorAll('[name="setup-levels"]').forEach(el => { el.checked = s.levels.includes(el.value); });
@@ -506,15 +513,10 @@ function getFormData() {
   const industries = tagInputs.industries?.getValue() || [];
   const domains = tagInputs.domains?.getValue() || [];
 
-  const titlesFlex = parseInt(document.getElementById('setup-titles-flex')?.value ?? 2);
-  const industriesFlex = parseInt(document.getElementById('setup-industries-flex')?.value ?? 2);
-  const domainsFlex = parseInt(document.getElementById('setup-domains-flex')?.value ?? 2);
-
   return {
     identity, role, level, targetLevel, years, yearsInRole, prevRoles,
     compMin, compMax, compFlexible, location, workStyle, nonneg,
     titles, industries, domains,
-    titlesFlex, industriesFlex, domainsFlex,
     levels, companySize,
   };
 }
@@ -555,9 +557,9 @@ function buildSummary() {
 
   // Search section
   summaryHtml += '<div class="setup-confirm-section"><h4>Search Preferences</h4><dl>';
-  if (data.titles.length) summaryHtml += `<dt>Titles</dt><dd>${data.titles.map(t => `<sl-tag size="small">${esc(t)}</sl-tag>`).join(' ')} <em>(${FLEX_LABELS[data.titlesFlex]})</em></dd>`;
-  if (data.industries.length) summaryHtml += `<dt>Industries</dt><dd>${data.industries.map(t => `<sl-tag size="small">${esc(t)}</sl-tag>`).join(' ')} <em>(${FLEX_LABELS[data.industriesFlex]})</em></dd>`;
-  if (data.domains.length) summaryHtml += `<dt>Domains</dt><dd>${data.domains.map(t => `<sl-tag size="small">${esc(t)}</sl-tag>`).join(' ')} <em>(${FLEX_LABELS[data.domainsFlex]})</em></dd>`;
+  if (data.titles.length) summaryHtml += `<dt>Titles</dt><dd>${data.titles.map(t => `<sl-tag size="small">${esc(t)}</sl-tag>`).join(' ')}</dd>`;
+  if (data.industries.length) summaryHtml += `<dt>Industries</dt><dd>${data.industries.map(t => `<sl-tag size="small">${esc(t)}</sl-tag>`).join(' ')}</dd>`;
+  if (data.domains.length) summaryHtml += `<dt>Domains</dt><dd>${data.domains.map(t => `<sl-tag size="small">${esc(t)}</sl-tag>`).join(' ')}</dd>`;
   if (data.levels.length) summaryHtml += `<dt>Levels</dt><dd>${data.levels.join(', ')}</dd>`;
   if (data.companySize.length) summaryHtml += `<dt>Company size</dt><dd>${data.companySize.join(', ')}</dd>`;
   summaryHtml += '</dl></div>';
@@ -655,9 +657,9 @@ async function completeSetup() {
 
     // Save search config
     const searchConfig = {
-      titles: { values: data.titles, flexibility: data.titlesFlex },
-      industries: { values: data.industries, flexibility: data.industriesFlex },
-      domains: { values: data.domains, flexibility: data.domainsFlex },
+      titles: { values: data.titles },
+      industries: { values: data.industries },
+      domains: { values: data.domains },
       locations: data.location ? [data.location] : [],
       workStyle: data.workStyle,
       salaryFloor: null,

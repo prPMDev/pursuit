@@ -9,7 +9,6 @@ import { TagInput } from './tag-input.js';
 let taxonomies = { titles: [], industries: [], domains: [] };
 let tagInputs = {};
 
-const FLEX_LABELS = ['Exact', 'Tight', 'Medium', 'Loose', 'Wide Open'];
 
 export function renderSettingsModal() {
   const container = document.getElementById('modal-container');
@@ -48,36 +47,21 @@ export function renderSettingsModal() {
 
       <div class="settings-section">
         <h4>Search Configuration</h4>
-        <p class="modal-hint">Tags tell the fetcher what to search for. Flexibility sliders tell the scanner how strictly to match.</p>
+        <p class="modal-hint">Tags tell the fetcher what to search for. Type your own or pick from suggestions.</p>
 
         <div class="settings-field">
           <label>Job Titles</label>
           <div id="settings-titles-input"></div>
-          <div class="setup-slider-row">
-            <span class="setup-slider-label">Flexibility</span>
-            <sl-range id="settings-titles-flex" min="0" max="4" value="2" step="1" tooltip="none"></sl-range>
-            <span class="setup-slider-value" id="settings-titles-flex-label">Medium</span>
-          </div>
         </div>
 
         <div class="settings-field">
           <label>Industries</label>
           <div id="settings-industries-input"></div>
-          <div class="setup-slider-row">
-            <span class="setup-slider-label">Flexibility</span>
-            <sl-range id="settings-industries-flex" min="0" max="4" value="2" step="1" tooltip="none"></sl-range>
-            <span class="setup-slider-value" id="settings-industries-flex-label">Medium</span>
-          </div>
         </div>
 
         <div class="settings-field">
           <label>Domains / Focus Areas</label>
           <div id="settings-domains-input"></div>
-          <div class="setup-slider-row">
-            <span class="setup-slider-label">Flexibility</span>
-            <sl-range id="settings-domains-flex" min="0" max="4" value="2" step="1" tooltip="none"></sl-range>
-            <span class="setup-slider-value" id="settings-domains-flex-label">Medium</span>
-          </div>
         </div>
 
         <div class="settings-field">
@@ -215,19 +199,6 @@ async function initTagInputsForSettings() {
     placeholder: 'Type a location...',
   });
 
-  // Bind flex label updates
-  bindFlexLabel('settings-titles-flex', 'settings-titles-flex-label');
-  bindFlexLabel('settings-industries-flex', 'settings-industries-flex-label');
-  bindFlexLabel('settings-domains-flex', 'settings-domains-flex-label');
-}
-
-function bindFlexLabel(sliderId, labelId) {
-  const slider = document.getElementById(sliderId);
-  const label = document.getElementById(labelId);
-  if (!slider || !label) return;
-  const update = () => { label.textContent = FLEX_LABELS[slider.value] || 'Medium'; };
-  slider.addEventListener('sl-input', update);
-  update();
 }
 
 export function initSettings() {
@@ -321,9 +292,9 @@ export function initSettings() {
   // Save search config
   document.getElementById('btn-save-search-config')?.addEventListener('click', async () => {
     const searchConfig = {
-      titles: { values: tagInputs.titles?.getValue() || [], flexibility: parseInt(document.getElementById('settings-titles-flex')?.value ?? 2) },
-      industries: { values: tagInputs.industries?.getValue() || [], flexibility: parseInt(document.getElementById('settings-industries-flex')?.value ?? 2) },
-      domains: { values: tagInputs.domains?.getValue() || [], flexibility: parseInt(document.getElementById('settings-domains-flex')?.value ?? 2) },
+      titles: { values: tagInputs.titles?.getValue() || [] },
+      industries: { values: tagInputs.industries?.getValue() || [] },
+      domains: { values: tagInputs.domains?.getValue() || [] },
       locations: tagInputs.locations?.getValue() || [],
       levels: [...document.querySelectorAll('[name="settings-levels"]:checked')].map(el => el.value),
       companySize: [...document.querySelectorAll('[name="settings-company-size"]:checked')].map(el => el.value),
@@ -497,18 +468,6 @@ async function loadSettingsUI() {
         const el = document.getElementById(id);
         if (el) el.value = val ?? 2;
       };
-      setSlider('settings-titles-flex', config.titles?.flexibility);
-      setSlider('settings-industries-flex', config.industries?.flexibility);
-      setSlider('settings-domains-flex', config.domains?.flexibility);
-
-      // Update flex labels
-      ['settings-titles-flex-label', 'settings-industries-flex-label', 'settings-domains-flex-label'].forEach((labelId, i) => {
-        const flexIds = ['settings-titles-flex', 'settings-industries-flex', 'settings-domains-flex'];
-        const slider = document.getElementById(flexIds[i]);
-        const label = document.getElementById(labelId);
-        if (slider && label) label.textContent = FLEX_LABELS[slider.value] || 'Medium';
-      });
-
       // Levels
       (config.levels || []).forEach(l => {
         const cb = document.querySelector(`[name="settings-levels"][value="${l}"]`);
