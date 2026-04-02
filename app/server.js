@@ -516,7 +516,7 @@ app.get('/api/jobs', async (req, res) => {
       });
     }
 
-    // Overlay decisions from index (so inline Pass/Save persists across refresh)
+    // Overlay decisions from index (so inline decisions persist across refresh)
     for (const job of allJobs) {
       const decision = decisionsIndex[job.id];
       if (decision) {

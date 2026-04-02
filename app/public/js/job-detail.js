@@ -65,12 +65,13 @@ export function showJobDetail(job) {
     actionPipeline.innerHTML = `<span class="status-badge pass">Passed</span>
       <button class="btn btn-sm btn-ghost" id="btn-reconsider" style="margin-left: 8px;">Reconsider</button>`;
     document.getElementById('btn-reconsider')?.addEventListener('click', async () => {
+      const targetState = job.hasEvaluation ? 'EVALUATED' : 'NEW';
       await api('/decisions', {
         method: 'POST',
-        body: { company: job.company, role: job.role, scannerAction: job.action, decision: 'NEW' },
+        body: { company: job.company, role: job.role, scannerAction: job.action, decision: targetState },
       });
-      job.decision = '';
-      job.action = job.hasEvaluation ? 'EVALUATED' : 'NEW';
+      job.decision = targetState;
+      job.action = targetState;
       refreshJobList();
       showJobDetail(job);
     });
@@ -322,9 +323,17 @@ function renderEvaluator() {
           method: 'POST',
           body: { jobDescription: buildEvalDescription(), dossierFile: currentJob.dossierFile },
         });
+        // Persist EVALUATED state so it survives refresh
+        await api('/decisions', {
+          method: 'POST',
+          body: { company: currentJob.company, role: currentJob.role, scannerAction: currentJob.action, decision: 'EVALUATED' },
+        });
         currentJob.evaluation = result.result;
         currentJob.hasEvaluation = true;
+        currentJob.action = 'EVALUATED';
+        currentJob.decision = 'EVALUATED';
         renderEvaluator();
+        refreshJobList();
         hideLoading();
       } catch (err) {
         hideLoading();

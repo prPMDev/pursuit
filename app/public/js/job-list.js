@@ -317,7 +317,8 @@ function applyFilter() {
   } else if (currentFilter === 'EVALUATED') {
     table.setFilter((data) => {
       const action = normalizeAction(data.action);
-      return action === 'EVALUATED' || data.decision === 'EVALUATED' || data.hasEvaluation;
+      const isEval = action === 'EVALUATED' || data.decision === 'EVALUATED' || data.hasEvaluation;
+      return isEval && data.decision !== 'PURSUING' && data.decision !== 'PASS';
     });
   } else if (currentFilter === 'PURSUING') {
     table.setFilter((data) => data.decision === 'PURSUING' || data.action === 'PURSUING');
