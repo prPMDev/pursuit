@@ -27,11 +27,13 @@ function badgeFormatter(cell) {
 function signalFormatter(cell) {
   const data = cell.getRow().getData();
   const score = data.fitScore;
+  const evalDecision = data.evalDecision;
   const text = data.keySignal || data.narrative || '';
   const scoreBadge = score ? `<span class="fit-score fit-score-${score >= 80 ? 'high' : score >= 65 ? 'mid' : 'low'}">${score}%</span> ` : '';
+  const evalBadge = evalDecision ? `<span class="eval-rec eval-rec-${evalDecision.toLowerCase()}">${evalDecision}</span> ` : '';
   if (!text && !score) return '<span class="cell-muted">\u2014</span>';
-  const truncated = text.length > 60 ? text.substring(0, 57) + '...' : text;
-  return `${scoreBadge}<span class="cell-signal-text">${truncated}</span>`;
+  const truncated = text.length > 50 ? text.substring(0, 47) + '...' : text;
+  return `${scoreBadge}${evalBadge}<span class="cell-signal-text">${truncated}</span>`;
 }
 
 function dateFormatter(cell) {

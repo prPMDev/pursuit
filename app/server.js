@@ -486,10 +486,20 @@ app.get('/api/jobs', async (req, res) => {
           job.source = file.includes('indeed') ? 'Indeed' : file.includes('linkedin') ? 'LinkedIn' : 'Manual';
         }
 
-        // Check if evaluation exists
+        // Check if evaluation exists and extract revised fit score
         const evalFile = evalFiles.find(f => f.includes(job.id));
         job.hasEvaluation = !!evalFile;
         job.evalFile = evalFile || null;
+        if (evalFile) {
+          try {
+            const evalContent = await readFile(join(DATA, 'evaluations', evalFile), 'utf-8');
+            const fitMatch = evalContent.match(/\*\*Fit:\s*(\d+)%/);
+            if (fitMatch) job.fitScore = parseInt(fitMatch[1]); // Override scanner score
+            // Extract evaluator decision for display
+            const decMatch = evalContent.match(/\*\*Decision:\s*(PURSUE|MAYBE|PASS)/i);
+            if (decMatch) job.evalDecision = decMatch[1].toUpperCase();
+          } catch { /* eval file read failed, keep scanner score */ }
+        }
 
         allJobs.push(job);
       }

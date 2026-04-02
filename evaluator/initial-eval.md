@@ -19,6 +19,7 @@ IMPORTANT: Use exactly **Watch-outs:** as the field name (not "Watch for" or oth
 
 ```
 **Decision: PURSUE / MAYBE / PASS**
+**Fit: [0-100]%** — revised fit score after deep analysis. This OVERRIDES the Scanner's initial score. Use the same rubric: structural match (0-40), level fit (0-25), domain relevance (0-20), company context (0-15). Be honest — if the Scanner overscored because it only saw the title, correct it here.
 **Confidence:** [High / Medium / Low]
 
 **Fit summary:** [1-2 sentence overall assessment of fit]
@@ -65,6 +66,7 @@ Watch-for: "15 to 50+ integrations" is ambitious — check if they have the eng 
 </input>
 <output>
 **Decision: PURSUE**
+**Fit: 85%** — Scanner had this right. Direct structural match, right level, one learnable domain gap.
 **Confidence:** High
 
 **Fit summary:** Strong direct match — core integrations PM work in a new domain (healthcare) at a company stage and size that fits the profile well.
@@ -107,6 +109,7 @@ Watch-for: 45-person company may be too early-stage. "Product Lead" title could 
 </input>
 <output>
 **Decision: MAYBE**
+**Fit: 58%** — Scanner's 72% was optimistic. Two unresolved concerns (stage + title ambiguity) pull this down until answered.
 **Confidence:** Medium
 
 **Fit summary:** Interesting adjacent match with real upside, but two concerns — company stage and role ambiguity — need answers before committing.
@@ -146,6 +149,7 @@ Watch-for: VP at a 50K-person bank is a political role. Check if this is product
 </input>
 <output>
 **Decision: PASS**
+**Fit: 15%** — Scanner included this for compensation. Actual fit is near zero: wrong level, wrong domain, wrong stage.
 **Confidence:** High
 
 **Fit summary:** Two levels above target, wrong domain, wrong company stage. Compensation alone doesn't justify 3 stretch factors.

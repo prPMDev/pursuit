@@ -1229,6 +1229,10 @@ textarea:focus { outline: 2px solid var(--text); outline-offset: -1px; }
 .fit-score-high { background: var(--green-bg); color: var(--green); }
 .fit-score-mid { background: var(--amber-bg); color: var(--amber); }
 .fit-score-low { background: var(--gray-bg); color: var(--gray); }
+.eval-rec { display: inline-block; font-size: 10px; font-weight: 600; padding: 1px 5px; border-radius: var(--radius-pill); margin-right: 3px; text-transform: uppercase; letter-spacing: 0.3px; }
+.eval-rec-pursue { background: var(--green-bg); color: var(--green); }
+.eval-rec-maybe { background: var(--amber-bg); color: var(--amber); }
+.eval-rec-pass { background: var(--red-bg, #fef2f2); color: var(--red, #dc2626); }
 
 /* Cell overflow for actions */
 .tabulator .tabulator-cell.cell-actions { overflow: visible !important; }
