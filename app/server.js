@@ -438,6 +438,7 @@ app.get('/api/jobs', async (req, res) => {
     const scanDir = join(DATA, 'scans');
     const files = await readdir(scanDir).catch(() => []);
     const allJobs = [];
+    const seenJobIds = new Set(); // Dedup across scan files and within scanner output
     const evalFiles = await readdir(join(DATA, 'evaluations')).catch(() => []);
     const profile = await readMarkdown(join(DATA, 'profile.md')) || '';
 
@@ -447,6 +448,8 @@ app.get('/api/jobs', async (req, res) => {
 
       for (const job of parsed.jobs) {
         job.id = jobId(job.company, job.role);
+        if (seenJobIds.has(job.id)) continue; // Skip duplicates across scan files
+        seenJobIds.add(job.id);
         job.scanFile = file;
         job.tags = extractTags(job, profile);
         job.date = file.substring(0, 10);
@@ -492,10 +495,15 @@ app.get('/api/jobs', async (req, res) => {
       }
     }
 
-    // Include raw fetched jobs that haven't been scanned yet
+    // Include raw fetched jobs that haven't been scanned yet (dedup by role title)
     const scannedIds = new Set(allJobs.map(j => j.id));
+    const seenRawRoles = new Set();
     for (const [id, raw] of Object.entries(rawJobIndex)) {
       if (scannedIds.has(id)) continue;
+      // Dedup raw jobs by normalized company+role to avoid dirty-name duplicates
+      const rawKey = `${raw.company.replace(/remote|hybrid|on-?site/gi, '').trim()}|${raw.title}`.toLowerCase();
+      if (seenRawRoles.has(rawKey)) continue;
+      seenRawRoles.add(rawKey);
       const missingFields = [];
       if (!raw.fullDescription && !raw.summary) missingFields.push('description');
       if (!raw.salary) missingFields.push('salary');
