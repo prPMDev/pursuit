@@ -35,6 +35,7 @@ For listings that pass Gate 1:
 - **Level calibration:** Use my leveling context. If I say "Staff at a startup ≈ Senior at FAANG," respect that when evaluating titles.
 - **Structural skill transfer:** My skills transfer across domains. If I built integrations in fintech, I can do it in healthcare. Domain is learnable. Don't over-filter on industry.
 - **Risk appetite:** Check my profile. Tag as SAFE PLAY (direct match) or STRETCH (level up, new domain, or both). Respect my stated tolerance — if I said "1 stretch factor max," don't CONSIDER something with 2.
+- **Experience vs. aspiration:** If "Search Interests" are provided below the profile, distinguish between domains the candidate HAS worked in (evidenced in the profile) and domains they WANT to explore (listed in search interests only). For aspiration-only domains: score domain relevance at 5-10pts (not 15-20), tag the match as "Exploratory," and say "domain interest" not "domain match" in the narrative. Never say "perfect match" for a domain the candidate has not worked in.
 - **Red flag detection:** Check against my personal red flags AND standard ones (vague JD, unrealistic requirements, execution-only roles).
 - **Energy match:** If I said I thrive in startup chaos, don't recommend a 10,000-person company bureaucracy role (and vice versa).
 

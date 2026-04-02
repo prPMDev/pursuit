@@ -153,6 +153,21 @@ async function createDossier(job) {
   await writeFile(join(DOSSIERS_DIR, `${job.id}.md`), content);
 }
 
+function buildAspirationContext() {
+  const config = settings.searchConfig;
+  if (!config) return '';
+  const domains = config.domains?.values || [];
+  const industries = config.industries?.values || [];
+  if (domains.length === 0 && industries.length === 0) return '';
+  const parts = [
+    '\n\n## My Search Interests (Aspiration, NOT Experience)\n',
+    'These are domains and industries I am exploring. They do NOT mean I have experience here. Treat as interest signals only. My actual experience is described in my profile above.',
+  ];
+  if (domains.length) parts.push(`\nDomains of interest: ${domains.join(', ')}`);
+  if (industries.length) parts.push(`Industries of interest: ${industries.join(', ')}`);
+  return parts.join('\n');
+}
+
 function buildFallbackScannerSection(job) {
   return [
     `- Match: ${job.matchType || 'Unknown'}`,
@@ -667,7 +682,10 @@ app.post('/api/scan', async (req, res) => {
       referencesContext = refParts.join('\n');
     }
 
-    const userMessage = `## My Profile\n\n${profile}${referencesContext}\n\n## Job Listings\n\n${listings}`;
+    // Build aspiration context from search config (domains/industries user is exploring)
+    const aspirationContext = buildAspirationContext();
+
+    const userMessage = `## My Profile\n\n${profile}${referencesContext}${aspirationContext}\n\n## Job Listings\n\n${listings}`;
     const result = await callAI(scannerPrompt, userMessage);
 
     // Write to data/scans/
@@ -1511,7 +1529,8 @@ app.post('/api/fetch-and-scan', async (req, res) => {
     }
 
     const scannerPrompt = await readMarkdown(SCANNER_PROMPT);
-    const userMessage = `## My Profile\n\n${profile}\n\n## Job Listings\n\n${allListings}`;
+    const aspirationContext = buildAspirationContext();
+    const userMessage = `## My Profile\n\n${profile}${aspirationContext}\n\n## Job Listings\n\n${allListings}`;
     const scanResult = await callAI(scannerPrompt, userMessage);
 
     const scanFilename = `${datePrefix()}-auto-scan.md`;
