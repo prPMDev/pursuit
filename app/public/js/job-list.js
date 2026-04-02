@@ -119,9 +119,6 @@ async function inlineEvaluate(jobId) {
 
     const row2 = table.getRows().find(r => r.getData().id === jobId);
     if (row2) row2.reformat();
-
-    // Open detail panel to show evaluation result
-    showJobDetail(job);
   } catch (err) {
     job._evaluating = false;
     const row2 = table.getRows().find(r => r.getData().id === jobId);
