@@ -422,11 +422,16 @@ app.get('/api/jobs', async (req, res) => {
     const jobDir = join(DATA, 'jobs');
     const jobFiles = await readdir(jobDir).catch(() => []);
     const rawJobIndex = {};
+    const rawByRole = {}; // Fuzzy fallback: role title → raw job (for when company names mismatch)
     for (const file of jobFiles.filter(f => f.endsWith('.md'))) {
       const content = await readFile(join(jobDir, file), 'utf-8');
       for (const raw of parseRawJobListings(content)) {
         const key = jobId(raw.company, raw.title);
         rawJobIndex[key] = raw;
+        // Build fuzzy index by normalized role title for fallback matching
+        const roleKey = raw.title.toLowerCase().trim();
+        if (!rawByRole[roleKey]) rawByRole[roleKey] = [];
+        rawByRole[roleKey].push(raw);
       }
     }
 
@@ -446,8 +451,13 @@ app.get('/api/jobs', async (req, res) => {
         job.tags = extractTags(job, profile);
         job.date = file.substring(0, 10);
 
-        // Enrich with raw fetched metadata
-        const raw = rawJobIndex[job.id];
+        // Enrich with raw fetched metadata (exact match, then fuzzy fallback by role title + company substring)
+        let raw = rawJobIndex[job.id];
+        if (!raw) {
+          const candidates = rawByRole[job.role.toLowerCase().trim()] || [];
+          raw = candidates.find(c => c.company.toLowerCase().includes(job.company.toLowerCase()) ||
+                                     job.company.toLowerCase().includes(c.company.replace(/remote|hybrid|on-?site/gi, '').trim().toLowerCase()));
+        }
         if (raw) {
           job.location = raw.location || '';
           job.link = raw.link || '';
