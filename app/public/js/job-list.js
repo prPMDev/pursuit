@@ -119,6 +119,12 @@ async function inlineEvaluate(jobId) {
     job.action = 'EVALUATED';
     job.decision = 'EVALUATED';
 
+    // Extract revised fit score + recommendation from evaluator response for immediate table update
+    const fitMatch = result.result.match(/\*\*Fit:\s*(\d+)%/);
+    if (fitMatch) job.fitScore = parseInt(fitMatch[1]);
+    const decMatch = result.result.match(/\*\*Decision:\s*(PURSUE|MAYBE|PASS)/i);
+    if (decMatch) job.evalDecision = decMatch[1].toUpperCase();
+
     const row2 = table.getRows().find(r => r.getData().id === jobId);
     if (row2) row2.reformat();
 
