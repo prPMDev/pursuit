@@ -17,13 +17,17 @@ app/.env
 
 # User data (markdown data layer)
 data/profile.md
+data/resume.md
+data/resume-original.pdf
 data/jobs/
 data/scans/
 data/evaluations/
+data/dossiers/
 data/references/
 data/decisions.md
 data/patterns.md
 data/preferences.md
+data/learned-profile.md
 data/settings.json
 data/.seen-jobs.json
 
