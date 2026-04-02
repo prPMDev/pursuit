@@ -258,13 +258,20 @@ async function renderEvaluator() {
     const resumeAngle = extractField(eval_, 'Resume angle');
     const watchOuts = extractField(eval_, 'Watch-outs');
 
+    const fitScore = extractField(eval_, 'Fit');
+    const fitSummary = extractField(eval_, 'Fit summary');
+
     container.innerHTML = `
       <div class="eval-result">
         <div class="tags" style="margin-bottom: 8px;">
           ${decision ? `<span class="tag ${decisionColor(decision)}">${escapeHtml(decision)}</span>` : ''}
-          ${matchType ? `<span class="tag blue">${escapeHtml(matchType)}</span>` : ''}
-          ${levelFit ? `<span class="tag gray">${escapeHtml(levelFit)}</span>` : ''}
-          ${risk ? `<span class="tag ${risk.toLowerCase().includes('safe') ? 'green' : 'amber'}">${escapeHtml(risk)}</span>` : ''}
+          ${fitScore ? `<span class="tag blue">${escapeHtml(fitScore)}</span>` : ''}
+        </div>
+        ${fitSummary ? `<p class="narrative" style="margin-bottom: 8px;">${escapeHtml(fitSummary)}</p>` : ''}
+        <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 8px;">
+          ${matchType ? `<div><strong>Match:</strong> ${escapeHtml(matchType)}</div>` : ''}
+          ${levelFit ? `<div><strong>Level:</strong> ${escapeHtml(levelFit)}</div>` : ''}
+          ${risk ? `<div><strong>Risk:</strong> ${escapeHtml(risk)}</div>` : ''}
         </div>
         ${reasoning ? `<p class="narrative">${escapeHtml(reasoning)}</p>` : ''}
         ${watchOuts ? `<p style="font-size: 13px; color: var(--text-muted); margin-top: 8px;"><strong>Watch-outs:</strong> ${escapeHtml(watchOuts)}</p>` : ''}

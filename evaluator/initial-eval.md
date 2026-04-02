@@ -19,14 +19,14 @@ IMPORTANT: Use exactly **Watch-outs:** as the field name (not "Watch for" or oth
 
 ```
 **Decision: PURSUE / MAYBE / PASS**
-**Fit: [0-100]%** — revised fit score after deep analysis. This OVERRIDES the Scanner's initial score. Use the same rubric: structural match (0-40), level fit (0-25), domain relevance (0-20), company context (0-15). Be honest — if the Scanner overscored because it only saw the title, correct it here.
+**Fit: [0-100]%** : revised fit score after deep analysis. This OVERRIDES the Scanner's initial score. Use the same rubric: structural match (0-40), level fit (0-25), domain relevance (0-20), company context (0-15). Be honest: if the Scanner overscored because it only saw the title, correct it here.
 **Confidence:** [High / Medium / Low]
 
-**Fit summary:** [1-2 sentence overall assessment of fit]
+**Fit summary:** [1-2 sentence overall assessment. If PASS, lead with WHY it's a pass, not what's good about it.]
 
-**Match:** [Direct / Adjacent / Stretch] — [1 sentence why]
+**Match:** [Direct / Adjacent / Stretch] : [1 sentence why]
 **Level:** [Right fit / Too junior / Too senior]
-**Risk:** [Safe / Stretch] — [agrees with or overrides Scanner]
+**Risk:** [Safe / Stretch] : [agrees with or overrides Scanner]
 
 **Key strengths:**
 - [Strength 1]

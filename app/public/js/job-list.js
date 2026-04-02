@@ -28,7 +28,9 @@ function signalFormatter(cell) {
   const data = cell.getRow().getData();
   const score = data.fitScore;
   const evalDecision = data.evalDecision;
-  const text = data.keySignal || data.narrative || '';
+  // After evaluation, show evaluator's fit summary instead of scanner's signal
+  let text = data.keySignal || data.narrative || '';
+  if (data.evalSummary) text = data.evalSummary;
   const scoreBadge = score ? `<span class="fit-score fit-score-${score >= 80 ? 'high' : score >= 65 ? 'mid' : 'low'}">${score}%</span> ` : '';
   const evalBadge = evalDecision ? `<span class="eval-rec eval-rec-${evalDecision.toLowerCase()}">${evalDecision}</span> ` : '';
   if (!text && !score) return '<span class="cell-muted">\u2014</span>';
@@ -119,11 +121,13 @@ async function inlineEvaluate(jobId) {
     job.action = 'EVALUATED';
     job.decision = 'EVALUATED';
 
-    // Extract revised fit score + recommendation from evaluator response for immediate table update
+    // Extract revised fit score + recommendation + summary from evaluator response
     const fitMatch = result.result.match(/\*\*Fit:\s*(\d+)%/);
     if (fitMatch) job.fitScore = parseInt(fitMatch[1]);
     const decMatch = result.result.match(/\*\*Decision:\s*(PURSUE|MAYBE|PASS)/i);
     if (decMatch) job.evalDecision = decMatch[1].toUpperCase();
+    const sumMatch = result.result.match(/\*\*Fit summary:\*\*\s*(.+?)(?:\n|$)/);
+    if (sumMatch) job.evalSummary = sumMatch[1].trim();
 
     const row2 = table.getRows().find(r => r.getData().id === jobId);
     if (row2) row2.reformat();

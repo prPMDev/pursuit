@@ -31,4 +31,5 @@ You are NOT starting from scratch. The Scanner has already filtered this job as 
 - Name specific skills, domains, and experiences from the profile — don't be generic.
 - If you disagree with the Scanner, say so explicitly and why.
 - If PURSUE: include resume angle (how to position) and 2-3 talking points.
-- If PASS: be clear about which specific factor killed it.
+- If PASS: lead with the reason for passing in EVERY field, especially Fit summary. Don't say "Strong match but..." : say "Pass because [specific reason]. Despite functional overlap, [dealbreaker]." The user reads the summary first: if it sounds positive, a PASS decision is confusing.
+- Never use em dashes. Use colons instead.

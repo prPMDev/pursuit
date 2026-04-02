@@ -495,9 +495,10 @@ app.get('/api/jobs', async (req, res) => {
             const evalContent = await readFile(join(DATA, 'evaluations', evalFile), 'utf-8');
             const fitMatch = evalContent.match(/\*\*Fit:\s*(\d+)%/);
             if (fitMatch) job.fitScore = parseInt(fitMatch[1]); // Override scanner score
-            // Extract evaluator decision for display
             const decMatch = evalContent.match(/\*\*Decision:\s*(PURSUE|MAYBE|PASS)/i);
             if (decMatch) job.evalDecision = decMatch[1].toUpperCase();
+            const sumMatch = evalContent.match(/\*\*Fit summary:\*\*\s*(.+?)(?:\n|$)/);
+            if (sumMatch) job.evalSummary = sumMatch[1].trim();
           } catch { /* eval file read failed, keep scanner score */ }
         }
 
@@ -865,7 +866,7 @@ async function callAIProvider(provider, key, model, systemPrompt, userMessage) {
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: model || 'claude-sonnet-4-20250514', max_tokens: 4096, system: systemPrompt, messages: [{ role: 'user', content: userMessage }] }),
+      body: JSON.stringify({ model: model || 'claude-sonnet-4-20250514', max_tokens: 4096, temperature: 0.2, system: systemPrompt, messages: [{ role: 'user', content: userMessage }] }),
     });
     if (!resp.ok) {
       if (resp.status === 401) throw new Error('Invalid API key');
@@ -880,7 +881,7 @@ async function callAIProvider(provider, key, model, systemPrompt, userMessage) {
     const resp = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-      body: JSON.stringify({ model: model || 'gpt-5.4', max_tokens: 4096, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userMessage }] }),
+      body: JSON.stringify({ model: model || 'gpt-5.4', max_tokens: 4096, temperature: 0.2, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userMessage }] }),
     });
     if (!resp.ok) {
       if (resp.status === 401) throw new Error('Invalid API key');
@@ -895,7 +896,7 @@ async function callAIProvider(provider, key, model, systemPrompt, userMessage) {
     const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model || 'gemini-3-flash-preview'}:generateContent?key=${key}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ systemInstruction: { parts: [{ text: systemPrompt }] }, contents: [{ parts: [{ text: userMessage }] }] }),
+      body: JSON.stringify({ systemInstruction: { parts: [{ text: systemPrompt }] }, contents: [{ parts: [{ text: userMessage }] }], generationConfig: { temperature: 0.2 } }),
     });
     if (!resp.ok) {
       if (resp.status === 400 || resp.status === 403) throw new Error('Invalid API key');
