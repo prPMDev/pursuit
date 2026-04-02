@@ -6,9 +6,10 @@ let table = null;
 let allJobs = [];
 let currentFilter = 'all';
 
-// Backward compat: map old scanner terms to current 4-state model
+// Map scanner/legacy terms to 4-state model: NEW → EVALUATED → PURSUING → PASSED
+// Scanner's CONSIDER/MAYBE are signal strength, not status — all map to NEW
 const ACTION_MAP = {
-  'EVALUATE': 'EVALUATED', 'MAYBE': 'CONSIDER', 'SAVED': 'CONSIDER',
+  'CONSIDER': 'NEW', 'MAYBE': 'NEW', 'EVALUATE': 'NEW', 'SAVED': 'NEW',
   'SKIP': 'PASS', 'UNSCANNED': 'NEW', 'Unscanned': 'NEW',
 };
 
@@ -51,24 +52,18 @@ function actionsFormatter(cell) {
   const action = normalizeAction(data.action);
   const isPassed = data.decision === 'PASS' || action === 'PASS';
   const isEvaluated = data.hasEvaluation || action === 'EVALUATED' || data.decision === 'EVALUATED';
-  const isConsidered = data.decision === 'CONSIDER' || action === 'CONSIDER';
+  const isPursuing = data.decision === 'PURSUING' || action === 'PURSUING';
   const isEvaluating = data._evaluating;
   const hasApi = health.apiKeyConfigured;
 
-  // Don't show triage actions for pipeline jobs
-  if (data.decision === 'pursue' || data.pipelineStatus === 'pursuing' ||
-      data.pipelineStatus === 'applied' || data.pipelineStatus === 'interview') {
-    return '';
-  }
-
   let primaryBtn;
-  if (isEvaluating) {
+  if (isPursuing) {
+    primaryBtn = `<button class="btn-action btn-action-pursue btn-action-active" disabled>Pursuing</button>`;
+  } else if (isEvaluating) {
     primaryBtn = `<button class="btn-action btn-action-eval btn-action-active" disabled>Evaluating\u2026</button>`;
-  } else if (isConsidered) {
-    primaryBtn = `<button class="btn-action btn-action-consider btn-action-active" disabled>Considered</button>`;
   } else if (isEvaluated) {
-    // After evaluation, user decides: Consider or Pass
-    primaryBtn = `<button class="btn-action btn-action-consider">Consider</button>`;
+    // After evaluation, user decides: Pursue or Pass
+    primaryBtn = `<button class="btn-action btn-action-pursue">Pursue</button>`;
   } else if (!hasApi) {
     primaryBtn = `<button class="btn-action btn-action-eval" disabled title="Add API key in Settings">Evaluate</button>`;
   } else {
@@ -135,21 +130,21 @@ async function inlineEvaluate(jobId) {
   }
 }
 
-async function inlineConsider(jobId) {
+async function inlinePursue(jobId) {
   const job = allJobs.find(j => j.id === jobId);
   if (!job) return;
 
   try {
     await api('/decisions', {
       method: 'POST',
-      body: { company: job.company, role: job.role, scannerAction: job.action, decision: 'CONSIDER' },
+      body: { company: job.company, role: job.role, scannerAction: job.action, decision: 'PURSUING' },
     });
-    job.decision = 'CONSIDER';
-    job.action = 'CONSIDER';
+    job.decision = 'PURSUING';
+    job.action = 'PURSUING';
     const row = table.getRows().find(r => r.getData().id === jobId);
     if (row) row.reformat();
   } catch (err) {
-    console.error('Failed to consider:', err);
+    console.error('Failed to pursue:', err);
   }
 }
 
@@ -263,9 +258,11 @@ export function initJobList() {
       if (data.decision === 'PASS' || action === 'PASS') {
         el.classList.add('row-passed');
       }
-      if (data.decision === 'CONSIDER' || data.decision === 'SAVED' || action === 'CONSIDER' ||
-          data.decision === 'EVALUATED' || action === 'EVALUATED') {
-        el.classList.add('row-consider');
+      if (data.decision === 'EVALUATED' || action === 'EVALUATED' || data.hasEvaluation) {
+        el.classList.add('row-evaluated');
+      }
+      if (data.decision === 'PURSUING' || action === 'PURSUING') {
+        el.classList.add('row-pursuing');
       }
     },
   });
@@ -292,8 +289,8 @@ export function initJobList() {
 
     if (btn.classList.contains('btn-action-eval')) {
       inlineEvaluate(jobId);
-    } else if (btn.classList.contains('btn-action-consider')) {
-      inlineConsider(jobId);
+    } else if (btn.classList.contains('btn-action-pursue')) {
+      inlinePursue(jobId);
     } else if (btn.classList.contains('btn-action-pass')) {
       inlinePass(jobId);
     }
@@ -304,23 +301,26 @@ function applyFilter() {
   if (!table) return;
 
   if (currentFilter === 'all') {
-    // Inbox: show only scanner-processed jobs (not raw unscanned dumps)
+    // Inbox: show scanner-processed jobs that aren't passed (hide raw unscanned)
     table.setFilter((data) => {
       const action = normalizeAction(data.action);
-      const isProcessed = action !== 'NEW' || data.decision || data.hasEvaluation;
+      const hasScanner = data.fitScore || data.keySignal || data.narrative || data.matchType;
+      const isProcessed = hasScanner || data.decision || data.hasEvaluation;
       return isProcessed && action !== 'PASS' && data.decision !== 'PASS';
     });
   } else if (currentFilter === 'NEW') {
-    table.setFilter((data) => normalizeAction(data.action) === 'NEW' && !data.decision && data.decision !== 'PASS');
-  } else if (currentFilter === 'CONSIDER') {
+    // New: scanner-processed but not yet evaluated by user
     table.setFilter((data) => {
       const action = normalizeAction(data.action);
-      return action === 'EVALUATED' || action === 'CONSIDER' ||
-        data.decision === 'EVALUATED' || data.decision === 'CONSIDER' || data.decision === 'SAVED';
+      return action === 'NEW' && !data.hasEvaluation && data.decision !== 'PASS';
     });
-  } else if (currentFilter === 'pipeline') {
-    table.setFilter((data) => data.decision === 'pursue' || data.pipelineStatus === 'pursuing' ||
-        data.pipelineStatus === 'applied' || data.pipelineStatus === 'interview' || data.pipelineStatus === 'offered');
+  } else if (currentFilter === 'EVALUATED') {
+    table.setFilter((data) => {
+      const action = normalizeAction(data.action);
+      return action === 'EVALUATED' || data.decision === 'EVALUATED' || data.hasEvaluation;
+    });
+  } else if (currentFilter === 'PURSUING') {
+    table.setFilter((data) => data.decision === 'PURSUING' || data.action === 'PURSUING');
   } else if (currentFilter === 'passed') {
     table.setFilter((data) => {
       const action = normalizeAction(data.action);

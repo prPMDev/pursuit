@@ -22,16 +22,14 @@ export function initJobDetail() {
   // Evaluate button — bound dynamically in renderEvaluator() to avoid double-fire
 
   // Decision buttons — aligned with table flow (Consider / Pass)
-  document.getElementById('btn-consider').addEventListener('click', async () => {
-    await logDecision('CONSIDER');
+  document.getElementById('btn-pursue').addEventListener('click', async () => {
+    await logDecision('PURSUING');
     refreshJobList();
   });
   document.getElementById('btn-pass').addEventListener('click', async () => {
     await logDecision('PASS');
     refreshJobList();
   });
-
-  // Pipeline status buttons removed — Pursue flow deferred until #77 state machine lands
 }
 
 function openDetailPanel() {
@@ -59,6 +57,7 @@ export function showJobDetail(job) {
   const actionInitial = document.getElementById('action-initial');
   const actionPipeline = document.getElementById('action-pipeline');
   const isPassed = job.decision === 'PASS' || job.action === 'PASS' || job.action === 'SKIP';
+  const isPursuing = job.decision === 'PURSUING' || job.action === 'PURSUING';
 
   if (isPassed) {
     actionInitial.classList.add('hidden');
@@ -72,6 +71,32 @@ export function showJobDetail(job) {
       });
       job.decision = '';
       job.action = job.hasEvaluation ? 'EVALUATED' : 'NEW';
+      refreshJobList();
+      showJobDetail(job);
+    });
+  } else if (isPursuing) {
+    actionInitial.classList.add('hidden');
+    actionPipeline.classList.remove('hidden');
+    actionPipeline.innerHTML = `<span class="status-badge pursuing">Pursuing</span>
+      <button class="btn btn-sm btn-ghost" id="btn-not-pursuing" style="margin-left: 8px;">Not Pursuing</button>
+      <button class="btn btn-sm btn-ghost" id="btn-pass-pursuing" style="margin-left: 4px;">Pass</button>`;
+    document.getElementById('btn-not-pursuing')?.addEventListener('click', async () => {
+      await api('/decisions', {
+        method: 'POST',
+        body: { company: job.company, role: job.role, scannerAction: job.action, decision: 'EVALUATED' },
+      });
+      job.decision = 'EVALUATED';
+      job.action = 'EVALUATED';
+      refreshJobList();
+      showJobDetail(job);
+    });
+    document.getElementById('btn-pass-pursuing')?.addEventListener('click', async () => {
+      await api('/decisions', {
+        method: 'POST',
+        body: { company: job.company, role: job.role, scannerAction: job.action, decision: 'PASS' },
+      });
+      job.decision = 'PASS';
+      job.action = 'PASS';
       refreshJobList();
       showJobDetail(job);
     });
@@ -338,7 +363,7 @@ async function logDecision(decision) {
     });
 
     // Visual feedback
-    const btn = decision === 'CONSIDER' ? document.getElementById('btn-consider')
+    const btn = decision === 'PURSUING' ? document.getElementById('btn-pursue')
       : document.getElementById('btn-pass');
 
     if (btn) {
