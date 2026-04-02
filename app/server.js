@@ -701,7 +701,8 @@ app.post('/api/evaluate/:id', async (req, res) => {
       return res.status(500).json({ error: 'Evaluator prompts not found. Check evaluator/*.md files.' });
     }
 
-    // Build user message with profile + learned profile + dossier
+    // Build user message with profile + resume + learned profile + dossier
+    const resume = await readMarkdown(join(DATA, 'resume.md'));
     const learnedProfile = await readMarkdown(join(DATA, 'learned-profile.md'));
     // Read living dossier (try new location first, then legacy)
     let dossier = await readDossier(id);
@@ -711,6 +712,7 @@ app.post('/api/evaluate/:id', async (req, res) => {
 
     const userParts = [
       `## My Profile\n\n${profile}`,
+      resume ? `## My Resume\n\n${resume}` : '',
       learnedProfile ? `## Learned Profile (from past decisions)\n\n${learnedProfile}` : '',
       dossier ? `## Scanner Dossier\n\n${dossier}` : '',
       jobDescription ? `## Job Description\n\n${jobDescription}` : '',
