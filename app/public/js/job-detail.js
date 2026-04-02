@@ -234,10 +234,18 @@ export function showJobDetail(job) {
   renderEvaluator();
 }
 
-function renderEvaluator() {
+async function renderEvaluator() {
   const container = document.getElementById('detail-evaluator');
   const evalSection = container.closest('.detail-section');
   if (evalSection) evalSection.classList.remove('hidden'); // reset visibility
+
+  // Load evaluation text from server if we know it exists but haven't loaded it
+  if (currentJob.hasEvaluation && !currentJob.evaluation && currentJob.evalFile) {
+    try {
+      const detail = await api(`/jobs/${currentJob.id}`);
+      if (detail.evaluation) currentJob.evaluation = detail.evaluation;
+    } catch { /* failed to load, show Run Evaluator button */ }
+  }
 
   if (currentJob.hasEvaluation && currentJob.evaluation) {
     // Parse evaluation result — support both old and new field names
