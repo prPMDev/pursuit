@@ -504,17 +504,23 @@ function cleanJobData(job) {
   if (!job.company) return job;
   let company = job.company;
 
-  // Strip "Remote", "Hybrid", "On-site" even when glued directly to company name (no space)
-  // Handles: "XplorRemote", "FMG SuiteRemote", "BiocytogenRemote in Seattle, WA"
-  company = company.replace(/(?<=\S)(?:Remote|Hybrid|On-?site|Onsite)(?:\s*(?:work\s*(?:in)?)?)?/i, '').trim();
+  // Extract location from "CompanyRemote in City, ST" pattern BEFORE stripping
+  const remoteLocationMatch = company.match(/^(.+?)(Remote|Hybrid|On-?site|Onsite)\s*(?:in\s+)?(.+)$/i);
+  if (remoteLocationMatch) {
+    company = remoteLocationMatch[1].trim();
+    if (!job.location && remoteLocationMatch[3]) {
+      job.location = remoteLocationMatch[3].trim();
+    }
+    if (!job.remote && /remote/i.test(remoteLocationMatch[2])) {
+      job.remote = true;
+    }
+  } else {
+    // Strip standalone "Remote"/"Hybrid" suffix: "FMG SuiteRemote", "Deloitte Remote"
+    company = company.replace(/(?<=\S)(?:Remote|Hybrid|On-?site|Onsite)$/i, '').trim();
+    company = company.replace(/\s+(?:Remote|Hybrid|On-?site|Onsite)$/i, '').trim();
+  }
 
-  // Strip trailing " in City, ST" or "City, ST" fragments left after removing work style
-  company = company.replace(/\s*(?:in\s+)?[A-Z][a-z]+(?:\s[A-Z][a-z]+)*,\s*[A-Z]{2}(?:\s+\d{5})?$/, '').trim();
-
-  // Strip standalone work style prefixes (with space): "Deloitte Remote", "TechCo Hybrid work in..."
-  company = company.replace(/\s+(?:Remote|Hybrid|On-?site|Onsite)(?:\s*(?:work\s*(?:in)?)?)?.*$/i, '').trim();
-
-  // Look for city/state pattern stuck to company name: "DeloitteSan Francisco, CA"
+  // Strip trailing "City, ST" stuck to company name: "DeloitteSan Francisco, CA"
   const cityStateMatch = company.match(/^(.+?)([A-Z][a-z]+(?:\s[A-Z][a-z]+)*,\s*[A-Z]{2}.*)$/);
   if (cityStateMatch && cityStateMatch[1].length > 2) {
     company = cityStateMatch[1];
