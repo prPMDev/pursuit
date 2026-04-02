@@ -4,6 +4,8 @@ import { readFile, writeFile, readdir, mkdir, access, unlink } from 'node:fs/pro
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
+import multer from 'multer';
+import pdf2md from '@opendocsg/pdf2md';
 import { fetchJobs, findChromeExecutable, findChromeProfile } from './browser.js';
 import { SETUP_STEPS, buildSynthesisContext, extractJSON, extractProfileMarkdown } from './setup.js';
 
@@ -413,6 +415,28 @@ app.put('/api/profile', async (req, res) => {
   if (!content) return res.status(400).json({ error: 'Content required' });
   await writeFile(join(DATA, 'profile.md'), content);
   res.json({ ok: true });
+});
+
+// Resume — upload PDF, convert to markdown
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+
+app.post('/api/resume/upload', upload.single('resume'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+    if (!req.file.originalname.toLowerCase().endsWith('.pdf')) {
+      return res.status(400).json({ error: 'Only PDF files are supported' });
+    }
+    const markdown = await pdf2md(req.file.buffer);
+    await writeFile(join(DATA, 'resume.md'), markdown);
+    res.json({ ok: true, length: markdown.length });
+  } catch (err) {
+    res.status(500).json({ error: `Resume conversion failed: ${err.message}` });
+  }
+});
+
+app.get('/api/resume', async (req, res) => {
+  const content = await readMarkdown(join(DATA, 'resume.md'));
+  res.json({ hasResume: !!content, preview: content ? content.substring(0, 200) : null });
 });
 
 // Jobs — list all jobs from scans, enriched with raw fetched metadata

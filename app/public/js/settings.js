@@ -127,6 +127,16 @@ export function renderSettingsModal() {
       </div>
 
       <div class="settings-section">
+        <h4>Resume</h4>
+        <p class="modal-hint">Upload your resume (PDF). The evaluator uses it to ground recommendations in your actual experience.</p>
+        <div style="display: flex; align-items: center; gap: 8px; margin-top: 8px;">
+          <input type="file" id="resume-upload" accept=".pdf" style="font-size: 13px;" />
+          <span id="resume-status" class="settings-save-status"></span>
+        </div>
+        <p class="modal-hint" id="resume-info" style="margin-top: 4px;"></p>
+      </div>
+
+      <div class="settings-section">
         <h4>Data Management</h4>
 
         <div style="margin-bottom: 16px;">
@@ -226,6 +236,35 @@ export function initSettings() {
     showModal('modal-settings');
     await initTagInputsForSettings();
     await loadSettingsUI();
+    // Check resume status
+    try {
+      const r = await api('/resume');
+      document.getElementById('resume-info').textContent = r.hasResume
+        ? `Resume loaded (${r.preview.substring(0, 60)}...)`
+        : 'No resume uploaded yet.';
+    } catch { /* ignore */ }
+  });
+
+  // Resume upload
+  document.getElementById('resume-upload')?.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const status = document.getElementById('resume-status');
+    status.textContent = 'Uploading...';
+    const formData = new FormData();
+    formData.append('resume', file);
+    try {
+      const resp = await fetch('/api/resume/upload', { method: 'POST', body: formData });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error);
+      status.textContent = 'Uploaded';
+      status.style.color = 'var(--green)';
+      document.getElementById('resume-info').textContent = `Resume converted (${data.length} chars)`;
+      setTimeout(() => { status.textContent = ''; }, 3000);
+    } catch (err) {
+      status.textContent = `Failed: ${err.message}`;
+      status.style.color = 'var(--red)';
+    }
   });
 
   // Settings AI provider hint

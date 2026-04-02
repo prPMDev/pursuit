@@ -325,9 +325,16 @@ async function renderEvaluator() {
     if (evalSection) evalSection.classList.add('hidden');
     return;
   } else {
+    // Check if resume is uploaded for nudge
+    let resumeNudge = '';
+    try {
+      const r = await fetch('/api/resume').then(r => r.json());
+      if (!r.hasResume) resumeNudge = '<p style="font-size: 12px; color: var(--amber); margin-top: 6px;">Upload your resume in Settings for more accurate evaluation and resume angle recommendations.</p>';
+    } catch { /* ignore */ }
     container.innerHTML = `
       <button class="btn btn-sm" id="btn-evaluate">Run Evaluator</button>
       <span style="font-size: 12px; color: var(--text-muted); margin-left: 8px;">On-demand deep analysis</span>
+      ${resumeNudge}
     `;
     // Re-bind click handler
     document.getElementById('btn-evaluate')?.addEventListener('click', async () => {
