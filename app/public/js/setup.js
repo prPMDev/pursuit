@@ -210,6 +210,7 @@ export function renderSetupOverlay() {
 
         <div class="setup-nav">
           <span></span>
+          <button class="btn btn-ghost" id="setup-clear-profile" style="margin-right: 8px;">Clear</button>
           <button class="btn btn-primary" id="setup-to-search">Next: Search Preferences</button>
         </div>
       </div>
@@ -911,6 +912,21 @@ export function initSetup() {
       document.getElementById(id).style.borderColor = '';
     });
     switchTab('search');
+  });
+
+  // Clear profile form
+  document.getElementById('setup-clear-profile')?.addEventListener('click', () => {
+    ['setup-identity', 'setup-role', 'setup-level', 'setup-target-level',
+     'setup-years', 'setup-years-role', 'setup-prev-roles',
+     'setup-comp-min', 'setup-comp-max', 'setup-location', 'setup-nonneg'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) { el.value = ''; el.style.borderColor = ''; }
+    });
+    document.getElementById('setup-comp-flexible').checked = true;
+    ['setup-remote', 'setup-hybrid', 'setup-onsite'].forEach(id => {
+      document.getElementById(id).checked = false;
+    });
+    document.getElementById('setup-profile-error')?.remove();
   });
 
   // Clear red borders on input
