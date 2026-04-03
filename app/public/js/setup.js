@@ -209,8 +209,8 @@ export function renderSetupOverlay() {
         </div>
 
         <div class="setup-nav">
+          <button class="btn btn-ghost" id="setup-clear-profile">Clear</button>
           <span></span>
-          <button class="btn btn-ghost" id="setup-clear-profile" style="margin-right: 8px;">Clear</button>
           <button class="btn btn-primary" id="setup-to-search">Next: Search Preferences</button>
         </div>
       </div>
