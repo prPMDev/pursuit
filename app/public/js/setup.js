@@ -13,7 +13,7 @@ const SAMPLE_PROFILES = [
       identity: 'I build and scale B2B products by connecting customer needs to business outcomes.',
       role: 'Product Manager',
       level: 'Senior',
-      targetLevel: 'Staff PM',
+      targetLevel: 'Staff Product Manager',
       years: '8',
       yearsInRole: '5',
       prevRoles: 'Business Analyst, Management Consultant',
@@ -148,7 +148,7 @@ export function renderSetupOverlay() {
         <div class="setup-form-row">
           <div class="setup-form-group">
             <label for="setup-level">Current level <span class="required">*</span></label>
-            <input type="text" id="setup-level" placeholder="e.g., Senior, Staff, Lead">
+            <input type="text" id="setup-level" placeholder="e.g., Senior PM, Staff Engineer, Lead">
           </div>
           <div class="setup-form-group">
             <label for="setup-target-level">Target level</label>
@@ -424,6 +424,12 @@ function fillSampleProfile(index) {
   if (!sample) return;
   const p = sample.profile;
   const s = sample.search;
+
+  // Clear any validation errors
+  document.getElementById('setup-profile-error')?.remove();
+  ['setup-identity', 'setup-role', 'setup-level', 'setup-location'].forEach(id => {
+    document.getElementById(id).style.borderColor = '';
+  });
 
   // Profile tab fields
   document.getElementById('setup-identity').value = p.identity;
@@ -906,6 +912,16 @@ export function initSetup() {
     });
     switchTab('search');
   });
+
+  // Clear red borders on input
+  ['setup-identity', 'setup-role', 'setup-level', 'setup-location'].forEach(id => {
+    document.getElementById(id)?.addEventListener('input', () => {
+      document.getElementById(id).style.borderColor = '';
+      const errEl = document.getElementById('setup-profile-error');
+      if (errEl) errEl.remove();
+    });
+  });
+
   document.getElementById('setup-to-ai')?.addEventListener('click', () => switchTab('ai'));
   document.getElementById('setup-to-confirm')?.addEventListener('click', () => switchTab('confirm'));
   document.getElementById('setup-back-profile')?.addEventListener('click', () => switchTab('profile'));
