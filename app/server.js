@@ -7,6 +7,7 @@ import { createHash } from 'node:crypto';
 import multer from 'multer';
 import pdf2md from '@opendocsg/pdf2md';
 import { fetchJobs, findChromeExecutable, findChromeProfile } from './browser.js';
+import { fetchJobs as fetchAtsJobs } from 'ats-index';
 import { SETUP_STEPS, buildSynthesisContext, extractJSON, extractProfileMarkdown } from './setup.js';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
@@ -151,6 +152,76 @@ async function createDossier(job) {
     job.fullDescription || job.summary || job.rawListing || '—',
   ].join('\n');
   await writeFile(join(DOSSIERS_DIR, `${job.id}.md`), content);
+}
+
+/**
+ * Fetch jobs from ATS boards (Greenhouse, Ashby, Lever) via ats-index.
+ * Filters by user's configured job titles.
+ */
+async function fetchFromAtsIndex(watchlist, titleFilters) {
+  if (!watchlist || watchlist.length === 0) return [];
+  const allJobs = [];
+
+  for (const company of watchlist) {
+    try {
+      const jobs = await fetchAtsJobs({ company });
+      // Filter by title relevance: job title must contain at least one search title
+      const relevant = titleFilters.length > 0
+        ? jobs.filter(j => titleFilters.some(t =>
+            j.title.toLowerCase().includes(t.toLowerCase().replace(/^(senior|staff|principal|lead|group|director of)\s+/i, '').trim())
+          ))
+        : jobs;
+      allJobs.push(...relevant);
+    } catch (err) {
+      console.warn(`ATS fetch failed for ${company}: ${err.message}`);
+    }
+  }
+
+  // Convert ats-index schema to Pursuit raw job format
+  return allJobs.map(job => ({
+    title: job.title,
+    company: job.company,
+    location: job.location || '',
+    posted: job.postedAt ? job.postedAt.substring(0, 10) : 'Unknown',
+    source: `ATS (${job.ats})`,
+    summary: job.description ? job.description.substring(0, 500) : '',
+    fullDescription: job.description || '',
+    link: job.url || '',
+    salary: job.salary ? `$${job.salary.min?.toLocaleString()}-$${job.salary.max?.toLocaleString()}` : '',
+    jobType: job.metadata?.employmentType || '',
+    experienceLevel: '',
+    companySize: '',
+    availability: { status: 'live' },
+  }));
+}
+
+/**
+ * Format ATS jobs as markdown for the raw jobs directory.
+ */
+function formatAtsJobsMarkdown(jobs) {
+  const lines = [`# ATS Index Jobs - ${datePrefix()}`, `**Jobs found:** ${jobs.length}`, ''];
+  for (let i = 0; i < jobs.length; i++) {
+    const j = jobs[i];
+    lines.push('---');
+    lines.push(`**Job ${i + 1}**`);
+    lines.push(`Title: ${j.title}`);
+    lines.push(`Company: ${j.company}`);
+    if (j.location) lines.push(`Location: ${j.location}`);
+    if (j.posted && j.posted !== 'Unknown') lines.push(`Posted: ${j.posted}`);
+    lines.push(`Source: ${j.source}`);
+    if (j.link) lines.push(`Link: ${j.link}`);
+    if (j.salary) lines.push(`Salary: ${j.salary}`);
+    if (j.jobType) lines.push(`Type: ${j.jobType}`);
+    if (j.fullDescription) {
+      lines.push('');
+      lines.push('Full Description:');
+      lines.push(j.fullDescription);
+    } else if (j.summary) {
+      lines.push(`Summary: ${j.summary}`);
+    }
+    lines.push('');
+  }
+  return lines.join('\n');
 }
 
 function buildAspirationContext() {
@@ -1478,9 +1549,12 @@ app.post('/api/fetch-and-scan', async (req, res) => {
   if (limitResponse) return limitResponse;
 
   const searchQueries = settings.searchQueries || [];
-  if (searchQueries.length === 0) {
+  const watchlist = settings.searchConfig?.watchlist || [];
+  const titleFilters = settings.searchConfig?.titles?.values || [];
+
+  if (searchQueries.length === 0 && watchlist.length === 0) {
     return res.status(400).json({
-      error: 'No search queries configured. Add them in Settings.',
+      error: 'No search queries or company watchlist configured. Add them in Settings.',
     });
   }
 
@@ -1488,14 +1562,30 @@ app.post('/api/fetch-and-scan', async (req, res) => {
   const fetchNumber = getTodaysFetchCount();
 
   try {
-    // Step 1: Fetch jobs
-    const result = await fetchJobs(searchQueries, {
-      dataDir: DATA,
-      headless: true,
-      maxPages: 3,
-      getSummaries: true,
-      expirationDays: settings.dedupeExpirationDays || 7,
-    });
+    // Step 0: Fetch from ATS boards (always runs if watchlist configured)
+    let atsJobsList = [];
+    if (watchlist.length > 0) {
+      atsJobsList = await fetchFromAtsIndex(watchlist, titleFilters);
+      if (atsJobsList.length > 0) {
+        const atsMarkdown = formatAtsJobsMarkdown(atsJobsList);
+        const atsFilename = `${datePrefix()}-ats-index.md`;
+        await writeFile(join(DATA, 'jobs', atsFilename), atsMarkdown);
+      }
+    }
+
+    // Step 1: Fetch from LinkedIn/Indeed via Puppeteer (if enabled and queries exist)
+    let result = { totalFetched: 0, newJobs: [], files: [] };
+    if (settings.useBrowserScraping !== false && searchQueries.length > 0) {
+      result = await fetchJobs(searchQueries, {
+        dataDir: DATA,
+        headless: true,
+        maxPages: 3,
+        getSummaries: true,
+        expirationDays: settings.dedupeExpirationDays || 7,
+      });
+    }
+
+    const totalFetched = result.totalFetched + atsJobsList.length;
 
     // Only count successful fetches
     recordFetch();
@@ -1505,18 +1595,27 @@ app.post('/api/fetch-and-scan', async (req, res) => {
     fetchInProgress = false;
 
     // Filter out dead jobs before scanning
-    const liveJobs = result.newJobs.filter(j => j.availability?.status !== 'dead');
-    const deadCount = result.newJobs.length - liveJobs.length;
+    const liveJobs = [...result.newJobs, ...atsJobsList].filter(j => j.availability?.status !== 'dead');
+    const deadCount = (result.newJobs.length + atsJobsList.length) - liveJobs.length;
 
     if (liveJobs.length === 0) {
-      return res.json({ ok: true, totalFetched: result.totalFetched, deadFiltered: deadCount, message: deadCount > 0 ? `Found ${result.totalFetched} jobs but all appear expired.` : 'No new jobs found.' });
+      return res.json({ ok: true, totalFetched, deadFiltered: deadCount, message: deadCount > 0 ? `Found ${totalFetched} jobs but all appear expired.` : 'No new jobs found.' });
     }
 
-    // Step 2: Read the fetched jobs and scan them (dead jobs stay in files for audit)
+    // Step 2: Read ALL fetched jobs (browser + ATS) and scan them
     let allListings = '';
+    // Browser job files
     for (const file of result.files) {
       const content = await readFile(join(DATA, 'jobs', file), 'utf-8');
       allListings += content + '\n\n';
+    }
+    // ATS job file (if written)
+    if (atsJobsList.length > 0) {
+      const atsFile = `${datePrefix()}-ats-index.md`;
+      try {
+        const atsContent = await readFile(join(DATA, 'jobs', atsFile), 'utf-8');
+        allListings += atsContent + '\n\n';
+      } catch { /* file may not exist if no ATS jobs */ }
     }
 
     const profile = await readMarkdown(join(DATA, 'profile.md'));
@@ -1550,7 +1649,7 @@ app.post('/api/fetch-and-scan', async (req, res) => {
     fetchInProgress = false;
     res.json({
       ok: true,
-      totalFetched: result.totalFetched,
+      totalFetched,
       scanFile: scanFilename,
       fetchesToday: fetchNumber + 1,
       remaining: MAX_DAILY_FETCHES - fetchNumber - 1,

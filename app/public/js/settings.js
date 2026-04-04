@@ -88,6 +88,30 @@ export function renderSettingsModal() {
           </div>
         </div>
 
+        <div class="settings-field">
+          <label>Company Watchlist</label>
+          <p class="modal-hint">Companies to track via ATS boards (Greenhouse, Ashby, Lever). Jobs from these companies are fetched directly from their career pages.</p>
+          <div id="settings-watchlist-input"></div>
+          <div class="setup-suggestions" data-target="settings-watchlist-input">
+            <button type="button" class="btn-suggestion" data-value="stripe">stripe</button>
+            <button type="button" class="btn-suggestion" data-value="notion">notion</button>
+            <button type="button" class="btn-suggestion" data-value="linear">linear</button>
+            <button type="button" class="btn-suggestion" data-value="figma">figma</button>
+            <button type="button" class="btn-suggestion" data-value="vercel">vercel</button>
+            <button type="button" class="btn-suggestion" data-value="ramp">ramp</button>
+            <button type="button" class="btn-suggestion" data-value="datadog">datadog</button>
+            <button type="button" class="btn-suggestion" data-value="cloudflare">cloudflare</button>
+          </div>
+        </div>
+
+        <div class="settings-field">
+          <label class="setup-checkbox">
+            <input type="checkbox" id="settings-browser-scraping" checked>
+            Enable LinkedIn/Indeed browser scraping (requires local Chrome)
+          </label>
+          <p class="modal-hint">When disabled, jobs are fetched only from ATS boards in your watchlist. Enable for LinkedIn/Indeed results via your local browser.</p>
+        </div>
+
         <div style="margin-top: 12px;">
           <button class="btn btn-sm btn-primary" id="btn-save-search-config">Save Search Config</button>
           <span class="settings-save-status" id="search-config-status"></span>
@@ -194,6 +218,21 @@ async function initTagInputsForSettings() {
     placeholder: 'Type a domain...',
   });
 
+  tagInputs.watchlist = new TagInput(document.getElementById('settings-watchlist-input'), {
+    suggestions: [],
+    placeholder: 'Type a company slug (e.g., stripe, notion)...',
+  });
+
+  // Wire watchlist suggestion pills
+  document.querySelectorAll('.setup-suggestions[data-target="settings-watchlist-input"] .btn-suggestion').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (tagInputs.watchlist) {
+        tagInputs.watchlist.addTag(btn.dataset.value);
+        btn.classList.add('selected');
+      }
+    });
+  });
+
   tagInputs.locations = new TagInput(document.getElementById('settings-locations-input'), {
     suggestions: ['Remote', 'San Francisco', 'New York', 'Los Angeles', 'Seattle', 'Austin', 'Chicago', 'Boston', 'Denver', 'London', 'Toronto'],
     placeholder: 'Type a location...',
@@ -298,12 +337,14 @@ export function initSettings() {
       locations: tagInputs.locations?.getValue() || [],
       levels: [...document.querySelectorAll('[name="settings-levels"]:checked')].map(el => el.value),
       companySize: [...document.querySelectorAll('[name="settings-company-size"]:checked')].map(el => el.value),
+      watchlist: tagInputs.watchlist?.getValue() || [],
     };
+    const useBrowserScraping = document.getElementById('settings-browser-scraping')?.checked ?? true;
 
     try {
       const result = await api('/settings', {
         method: 'PUT',
-        body: { searchConfig },
+        body: { searchConfig, useBrowserScraping },
       });
       const statusEl = document.getElementById('search-config-status');
       statusEl.textContent = 'Saved';
@@ -463,6 +504,7 @@ async function loadSettingsUI() {
       tagInputs.industries?.setValue(config.industries?.values || []);
       tagInputs.domains?.setValue(config.domains?.values || []);
       tagInputs.locations?.setValue(config.locations || []);
+      tagInputs.watchlist?.setValue(config.watchlist || []);
 
       const setSlider = (id, val) => {
         const el = document.getElementById(id);
@@ -480,6 +522,10 @@ async function loadSettingsUI() {
         if (cb) cb.checked = true;
       });
     }
+
+    // Browser scraping toggle
+    const browserToggle = document.getElementById('settings-browser-scraping');
+    if (browserToggle) browserToggle.checked = settings.useBrowserScraping !== false;
 
     // Show generated queries
     const queriesEl = document.getElementById('generated-queries');
