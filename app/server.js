@@ -792,11 +792,70 @@ app.post('/api/scan', async (req, res) => {
   }
 });
 
+/**
+ * Fetch a job page and extract additional data (salary, posted date).
+ * Lightweight HTTP fetch, no Puppeteer.
+ */
+async function fetchJobPageData(url) {
+  if (!url) return null;
+  try {
+    const resp = await fetch(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; ats-index/0.1)' },
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!resp.ok) return null;
+    const html = await resp.text();
+
+    // Extract salary from page
+    const salaryMatch = html.match(/\$([\d,]+)\s*[-–]\s*\$([\d,]+)/);
+    const salary = salaryMatch ? {
+      min: parseInt(salaryMatch[1].replace(/,/g, '')),
+      max: parseInt(salaryMatch[2].replace(/,/g, '')),
+    } : null;
+
+    // Extract posted date
+    const dateMatch = html.match(/(?:posted|published|date)[:\s]*(\d{4}-\d{2}-\d{2})/i)
+      || html.match(/(?:posted|published)\s+(\d+\s+(?:day|week|month)s?\s+ago)/i);
+    const postedDate = dateMatch ? dateMatch[1] : null;
+
+    // Check if still accepting applications
+    const closed = /no longer accepting|position has been filled|job not found/i.test(html);
+
+    // Extract full JD text if longer than what we have
+    const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+    const pageText = bodyMatch ? bodyMatch[1]
+      .replace(/<script[\s\S]*?<\/script>/gi, '')
+      .replace(/<style[\s\S]*?<\/style>/gi, '')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s{2,}/g, ' ')
+      .trim() : null;
+
+    return { salary, postedDate, closed, pageTextLength: pageText?.length || 0 };
+  } catch {
+    return null;
+  }
+}
+
 // Evaluate — run evaluator on a specific job (reads dossier + modular prompts)
 app.post('/api/evaluate/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { jobDescription, dossierFile } = req.body;
+    const { jobDescription, dossierFile, jobLink } = req.body;
+
+    // Fetch the actual job page for additional data
+    const pageData = await fetchJobPageData(jobLink);
+    let enrichedDescription = jobDescription || '';
+    if (pageData) {
+      if (pageData.salary) {
+        enrichedDescription += `\nSalary: $${pageData.salary.min.toLocaleString()} - $${pageData.salary.max.toLocaleString()}`;
+      }
+      if (pageData.postedDate) {
+        enrichedDescription += `\nPosted: ${pageData.postedDate}`;
+      }
+      if (pageData.closed) {
+        enrichedDescription += `\nWARNING: This listing may no longer be accepting applications.`;
+      }
+    }
 
     const profile = await readMarkdown(join(DATA, 'profile.md'));
     if (!profile) return res.status(400).json({ error: 'Profile not set' });
@@ -828,7 +887,7 @@ app.post('/api/evaluate/:id', async (req, res) => {
       resume ? `## My Resume\n\n${resume}` : '',
       learnedProfile ? `## Learned Profile (from past decisions)\n\n${learnedProfile}` : '',
       dossier ? `## Scanner Dossier\n\n${dossier}` : '',
-      jobDescription ? `## Job Description\n\n${jobDescription}` : '',
+      enrichedDescription ? `## Job Description\n\n${enrichedDescription}` : '',
     ].filter(Boolean);
 
     const result = await callAI(systemPrompt, userParts.join('\n\n'));

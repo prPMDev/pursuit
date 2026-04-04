@@ -94,7 +94,7 @@ async function inlineEvaluate(jobId) {
 
     const result = await api(`/evaluate/${jobId}`, {
       method: 'POST',
-      body: { jobDescription: desc, dossierFile: job.dossierFile },
+      body: { jobDescription: desc, dossierFile: job.dossierFile, jobLink: job.link },
     });
 
     // Persist EVALUATED decision so it survives page refresh
